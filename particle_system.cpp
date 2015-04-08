@@ -255,8 +255,8 @@ void ParticleSystem::ExplicitEuler(double timestep) {
   }
   ComputeForces();
   for (int i = 0; i < particles.size(); i++) {
-    particles[i].x += particles[i].v * timestep/2;
     particles[i].v += particles[i].f * particles[i].iMass * timestep/2;
+    particles[i].x += particles[i].v * timestep/2;
   }
   ComputeForces();
   for (int i = 0; i < particles.size(); i++) {
@@ -266,7 +266,7 @@ void ParticleSystem::ExplicitEuler(double timestep) {
     particles[i].v[0] = phaseTemp[i * 6 + 3];
     particles[i].v[1] = phaseTemp[i * 6 + 4];
     particles[i].v[2] = phaseTemp[i * 6 + 5];
-    particles[i].x += particles[i].v * timestep;
     particles[i].v += particles[i].f * particles[i].iMass * timestep;
+    particles[i].x += particles[i].v * timestep;
   }
 }
