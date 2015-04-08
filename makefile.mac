@@ -1,0 +1,31 @@
+CC=g++
+
+#cc simple.c libglfw3.a -framework Cocoa -framework OpenGL
+CFLAGS= -c -DMACOSX -I../ -Wno-write-strings -std=c++11
+
+LIBS= libglfw3.a -framework Cocoa -framework OpenGL -framework IOKit -framework CoreVideo -static-libgcc -static-libstdc++
+
+EXE=explicitspring
+
+
+OBJS=main.o draw_delegate.o particle_system.o duckrace.o
+
+
+build : $(EXE)
+
+
+$(EXE) : $(OBJS)
+	$(CC) -o $(EXE) $(OBJS) $(LIBS)
+
+
+main.o : main.cpp draw_delegate.h particle_system.h duckrace.h
+	$(CC) main.cpp $(CFLAGS) -o $@
+
+draw_delegate.o : draw_delegate.cpp draw_delegate.h
+	$(CC) draw_delegate.cpp $(CFLAGS) -o $@
+
+particle_system.o : particle_system.cpp particle_system.h
+	$(CC) particle_system.cpp $(CFLAGS) -o $@
+
+duckrace.o : duckrace.cpp duckrace.h particle_system.h
+	$(CC) duckrace.cpp $(CFLAGS) -o $@
