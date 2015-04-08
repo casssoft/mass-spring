@@ -23,7 +23,7 @@ class Spring {
 class ParticleSystem {
  public:
   ParticleSystem();
-  void Update(double timestep);
+  void Update(double timestep, bool implicit);
   float* GetPositions2d(int* size);
   void SetupTriangle();
   void SetupTriforce();
@@ -39,6 +39,7 @@ class ParticleSystem {
  private:
   void ComputeForces();
   void ExplicitEuler(double timestep);
+  void ImplicitEuler(double timestep);
   std::vector<float> posTemp;
   std::vector<double> phaseTemp;
   int mouseP;

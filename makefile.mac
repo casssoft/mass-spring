@@ -5,7 +5,7 @@ CFLAGS= -c -DMACOSX -I../ -Wno-write-strings -std=c++11
 
 LIBS= libglfw3.a -framework Cocoa -framework OpenGL -framework IOKit -framework CoreVideo -static-libgcc -static-libstdc++
 
-EXE=explicitspring
+EXE=spring
 
 
 OBJS=main.o draw_delegate.o particle_system.o duckrace.o

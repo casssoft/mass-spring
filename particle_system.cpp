@@ -1,6 +1,8 @@
 #include "particle_system.h"
 #include "draw_delegate.h"
 #include "duckrace.h"
+#include "Eigen/Sparse"
+#include "Eigen/IterativeLinearSolvers"
 
 ParticleSystem::ParticleSystem() {
   mouseP = -1;
@@ -8,8 +10,10 @@ ParticleSystem::ParticleSystem() {
   dampness = 10;
 }
 
-void ParticleSystem::Update(double timestep) {
-  ExplicitEuler(timestep);
+void ParticleSystem::Update(double timestep, bool implicit) {
+  if (implicit) ImplicitEuler(timestep);
+  else ExplicitEuler(timestep);
+
   for (int i = 0; i < particles.size(); i++) {
     if (particles[i].x[1] > DDHEIGHT-20) {
       particles[i].x[1] = DDHEIGHT - 20;
@@ -268,5 +272,69 @@ void ParticleSystem::ExplicitEuler(double timestep) {
     particles[i].v[2] = phaseTemp[i * 6 + 5];
     particles[i].v += particles[i].f * particles[i].iMass * timestep;
     particles[i].x += particles[i].v * timestep;
+  }
+}
+
+void ParticleSystem::ImplicitEuler(double timestep) {
+  int vSize = 3 * particles.size();
+  Eigen::SparseMatrix<double> A(vSize, vSize);
+  Eigen::VectorXd b(vSize);
+
+  Eigen::SparseMatrix<double> dfdx(vSize, vSize);
+  Eigen::SparseMatrix<double> dfdv(vSize, vSize);
+  dfdx.setZero();
+  dfdv.setZero();
+  Eigen::Matrix3d temp;
+  Eigen::Matrix3d tempdv;
+  for (int i = 0; i < springs.size(); i++) {
+    Eigen::Vector3d springdir = particles[springs[i].from].x - particles[springs[i].to].x;
+    double length = springdir.norm();
+    // Jacobian for Hookean spring force
+    temp = springs[i].k * ( (1 - springs[i].L/length) * (Eigen::MatrixXd::Identity(3,3) - ((springdir/length) * (springdir/length).transpose()))
+           + ((springdir/length) * (springdir/length).transpose()));
+
+    tempdv = springs[i].c * ((springdir/length) * (springdir/length).transpose());
+
+    for (int i = 0; i < 3; i++) {
+      for (int j = 0; j < 3; j++) {
+        dfdx.coeffRef(springs[i].to * 3 + i, springs[i].from * 3 + j) += temp(i, j);
+        dfdx.coeffRef(springs[i].from * 3 + i, springs[i].to * 3 + j) += temp(i, j);
+        dfdx.coeffRef(springs[i].to * 3 + i, springs[i].to * 3 + j) -= temp(i, j);
+        dfdx.coeffRef(springs[i].from * 3 + i, springs[i].from * 3 + j) -= temp(i, j);
+
+        dfdv.coeffRef(springs[i].to * 3 + i, springs[i].from * 3 + j) += tempdv(i, j);
+        dfdv.coeffRef(springs[i].from * 3 + i, springs[i].to * 3 + j) += tempdv(i, j);
+        dfdv.coeffRef(springs[i].to * 3 + i, springs[i].to * 3 + j) -= tempdv(i, j);
+        dfdv.coeffRef(springs[i].from * 3 + i, springs[i].from * 3 + j) -= tempdv(i, j);
+      }
+    }
+  }
+  ComputeForces();
+  Eigen::VectorXd v_0(vSize);
+  Eigen::VectorXd f_0(vSize);
+  A.setZero();
+  for (int i = 0; i < particles.size(); i++) {
+    v_0[i * 3] = particles[i].v[0];
+    v_0[i * 3 + 1] = particles[i].v[1];
+    v_0[i * 3 + 2] = particles[i].v[2];
+    f_0[i * 3] = particles[i].f[0];
+    f_0[i * 3 + 1] = particles[i].f[1];
+    f_0[i * 3 + 2] = particles[i].f[2];
+    A.coeffRef(i*3,i*3) = 1/particles[i].iMass;
+    A.coeffRef(i*3+1,i*3+1) = 1/particles[i].iMass;
+    A.coeffRef(i*3+2,i*3+2) = 1/particles[i].iMass;
+  }
+  b = timestep * (f_0 + timestep * (dfdx * v_0));
+  A -= timestep * dfdv - timestep * timestep * dfdx;
+  Eigen::VectorXd vdiff(vSize);
+  Eigen::ConjugateGradient<Eigen::SparseMatrix<double> > cg;
+  cg.compute(A);
+  vdiff = cg.solve(b);
+  for (int i = 0; i < particles.size(); i++) {
+    particles[i].v[0] += vdiff[i * 3];
+    particles[i].v[1] += vdiff[i * 3 + 1];
+    particles[i].v[2] += vdiff[i * 3 + 2];
+
+    particles[i].x += timestep * particles[i].v;
   }
 }

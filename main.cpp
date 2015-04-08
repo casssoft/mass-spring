@@ -16,6 +16,7 @@ void error_callback(int error, const char* description) {
 int changeSetup = 0;
 bool limitFps = false;
 bool recalculateFps = false;
+bool implicitUpdate = false;
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
   if (action == GLFW_PRESS) {
@@ -36,6 +37,11 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
         if (limitFps) limitFps = false;
         else limitFps = true;
         recalculateFps = true;
+        break;
+
+      case 'S':
+        if (implicitUpdate) implicitUpdate = false;
+        else implicitUpdate = true;
         break;
     }
   }
@@ -105,7 +111,7 @@ int main(int argc, char **argv) {
     }
 
     // Update m
-    m.Update(secondsPerFrame);
+    m.Update(secondsPerFrame, implicitUpdate);
 
     // Set mouse spring pos
     glfwGetCursorPos(window, &mouseX, &mouseY);
@@ -136,11 +142,11 @@ int main(int argc, char **argv) {
     if (curTime != timestart) {
       secondsPerFrame = (curTime - timestart)/frames;
     }
-    if (secondsPerFrame * frames > 5 || recalculateFps) {
+    if (secondsPerFrame * frames > 4 || recalculateFps) {
       recalculateFps = false;
       timestart = curTime;
       frames = 0;
-      printf("Frames per second: %f Springs: %d\n", 1.0/secondsPerFrame, m.springs.size());
+      printf("Frames per second: %f Springs: %d Implicit: %d\n", 1.0/secondsPerFrame, m.springs.size(), (int) implicitUpdate);
     }
   }
 
