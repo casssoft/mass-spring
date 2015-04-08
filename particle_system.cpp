@@ -50,14 +50,14 @@ void ParticleSystem::SetupTriangle() {
   particles.emplace_back();
   particles.emplace_back();
   particles.emplace_back();
-  particles[0].x << 100.0, 100.0, 0.0;
-  particles[0].v << 0.0, 0.0, 0.0;
+  particles[0].x << 100.0, 100.0;
+  particles[0].v << 0.0, 0.0;
   particles[0].iMass = 1;
-  particles[1].x << 200.0, 100.0, 0.0;
-  particles[1].v << 0.0, 10.0, 0.0;
+  particles[1].x << 200.0, 100.0;
+  particles[1].v << 0.0, 10.0;
   particles[1].iMass = 1;
-  particles[2].x << 200.0, 200.0, 0.0;
-  particles[2].v << 0.0, 0.0, 0.0;
+  particles[2].x << 200.0, 200.0;
+  particles[2].v << 0.0, 0.0;
   particles[2].iMass = 1;
 
   springs.emplace_back();
@@ -91,24 +91,24 @@ void ParticleSystem::SetupTriforce() {
   particles.emplace_back();
   particles.emplace_back();
   particles.emplace_back();
-  particles[0].x << 200.0, 100.0, 0.0;
-  particles[0].v << 0.0, 0.0, 0.0;
+  particles[0].x << 200.0, 100.0;
+  particles[0].v << 0.0, 0.0;
   particles[0].iMass = 1;
-  particles[1].x << 175.0, 125.0, 0.0;
-  particles[1].v << 0.0, 10.0, 0.0;
+  particles[1].x << 175.0, 125.0;
+  particles[1].v << 0.0, 10.0;
   particles[1].iMass = 1;
-  particles[2].x << 225.0, 125.0, 0.0;
-  particles[2].v << 0.0, 0.0, 0.0;
+  particles[2].x << 225.0, 125.0;
+  particles[2].v << 0.0, 0.0;
   particles[2].iMass = 1;
 
-  particles[3].x << 150.0, 150.0, 0.0;
-  particles[3].v << 0.0, 0.0, 0.0;
+  particles[3].x << 150.0, 150.0;
+  particles[3].v << 0.0, 0.0;
   particles[3].iMass = 1;
-  particles[4].x << 200.0, 150.0, 0.0;
-  particles[4].v << 0.0, 0.0, 0.0;
+  particles[4].x << 200.0, 150.0;
+  particles[4].v << 0.0, 0.0;
   particles[4].iMass = 1;
-  particles[5].x << 250.0, 150.0, 0.0;
-  particles[5].v << 0.0, 0.0, 0.0;
+  particles[5].x << 250.0, 150.0;
+  particles[5].v << 0.0, 0.0;
   particles[5].iMass = 1;
 
   // 9 springs
@@ -181,8 +181,8 @@ void ParticleSystem::SetupMouseSpring(int to) {
   if (mouseP == -1) {
     particles.emplace_back();
     mouseP = particles.size() - 1;
-    particles[mouseP].x << 0, 0, 0;
-    particles[mouseP].v << 0, 0, 0;
+    particles[mouseP].x << 0, 0;
+    particles[mouseP].v << 0, 0;
     particles[mouseP].iMass = 1;
   }
   springs.emplace_back();
@@ -210,8 +210,8 @@ void ParticleSystem::SetMouseSpring(bool enabled) {
 
 void ParticleSystem::SetMousePos(double x, double y) {
    if (mouseP != -1) {
-     particles[mouseP].x << x, y, 0;
-     particles[mouseP].v << 0, 0, 0;
+     particles[mouseP].x << x, y;
+     particles[mouseP].v << 0, 0;
    }
 }
 
@@ -230,7 +230,7 @@ void ParticleSystem::SetSpringProperties(double k, double c) {
 void ParticleSystem::ComputeForces() {
   //Zero all forces
   for (int i = 0; i < particles.size(); i++) {
-    particles[i].f << 0.0, 200.0, 0.0;
+    particles[i].f << 0.0, 200.0;
   }
   //Compute spring forces
   int sSize = springs.size();
@@ -238,8 +238,8 @@ void ParticleSystem::ComputeForces() {
     int to = springs[i].to;
     int from = springs[i].from;
     double length = (particles[to].x - particles[from].x).norm();
-    Eigen::Vector3d springdir = (particles[to].x - particles[from].x) / length;
-    Eigen::Vector3d force =  (length - springs[i].L) * springs[i].k * springdir;
+    Eigen::Vector2d springdir = (particles[to].x - particles[from].x) / length;
+    Eigen::Vector2d force =  (length - springs[i].L) * springs[i].k * springdir;
     // Damping
     force += springs[i].c * springdir * ((particles[to].v - particles[from].v).dot(springdir));
     particles[to].f -= force;
@@ -248,14 +248,12 @@ void ParticleSystem::ComputeForces() {
 }
 
 void ParticleSystem::ExplicitEuler(double timestep) {
-  phaseTemp.resize(particles.size() * 6);
+  phaseTemp.resize(particles.size() * 4);
   for (int i = 0; i < particles.size(); i++) {
-    phaseTemp[i * 6] = particles[i].x[0];
-    phaseTemp[i * 6 + 1] = particles[i].x[1];
-    phaseTemp[i * 6 + 2] = particles[i].x[2];
-    phaseTemp[i * 6 + 3] = particles[i].v[0];
-    phaseTemp[i * 6 + 4] = particles[i].v[1];
-    phaseTemp[i * 6 + 5] = particles[i].v[2];
+    phaseTemp[i * 4] = particles[i].x[0];
+    phaseTemp[i * 4 + 1] = particles[i].x[1];
+    phaseTemp[i * 4 + 2] = particles[i].v[0];
+    phaseTemp[i * 4 + 3] = particles[i].v[1];
   }
   ComputeForces();
   for (int i = 0; i < particles.size(); i++) {
@@ -264,49 +262,47 @@ void ParticleSystem::ExplicitEuler(double timestep) {
   }
   ComputeForces();
   for (int i = 0; i < particles.size(); i++) {
-    particles[i].x[0] = phaseTemp[i * 6];
-    particles[i].x[1] = phaseTemp[i * 6 + 1];
-    particles[i].x[2] = phaseTemp[i * 6 + 2];
-    particles[i].v[0] = phaseTemp[i * 6 + 3];
-    particles[i].v[1] = phaseTemp[i * 6 + 4];
-    particles[i].v[2] = phaseTemp[i * 6 + 5];
+    particles[i].x[0] = phaseTemp[i * 4];
+    particles[i].x[1] = phaseTemp[i * 4 + 1];
+    particles[i].v[0] = phaseTemp[i * 4 + 2];
+    particles[i].v[1] = phaseTemp[i * 4 + 3];
     particles[i].v += particles[i].f * particles[i].iMass * timestep;
     particles[i].x += particles[i].v * timestep;
   }
 }
 
 void ParticleSystem::ImplicitEuler(double timestep) {
-  int vSize = 3 * particles.size();
-  Eigen::SparseMatrix<double> A(vSize, vSize);
+  int vSize = 2 * particles.size();
+  Eigen::MatrixXd A(vSize, vSize);
   Eigen::VectorXd b(vSize);
 
-  Eigen::SparseMatrix<double> dfdx(vSize, vSize);
-  Eigen::SparseMatrix<double> dfdv(vSize, vSize);
+  Eigen::MatrixXd dfdx(vSize, vSize);
+  Eigen::MatrixXd dfdv(vSize, vSize);
   dfdx.setZero();
   dfdv.setZero();
-  Eigen::Matrix3d temp;
-  Eigen::Matrix3d tempdv;
+  Eigen::Matrix2d temp;
+  Eigen::Matrix2d tempdv;
   for (int i = 0; i < springs.size(); i++) {
-    Eigen::Vector3d springdir = particles[springs[i].from].x - particles[springs[i].to].x;
+    Eigen::Vector2d springdir = particles[springs[i].from].x - particles[springs[i].to].x;
     double length = springdir.norm();
     // Jacobian for Hookean spring force
     //temp = ( (springdir * springdir.transpose())/(springdir.transpose() * springdir) + ( Eigen::MatrixXd::Identity(3,3) - (springdir * springdir.transpose())/(springdir.transpose() * springdir)) * ( 1- springs[i].L/length)) * springs[i].k;
-    temp = springs[i].k * ( (1 - springs[i].L/length) * (Eigen::MatrixXd::Identity(3,3) - ((springdir/length) * (springdir/length).transpose()))
+    temp = springs[i].k * ( (1 - springs[i].L/length) * (Eigen::MatrixXd::Identity(2,2) - ((springdir/length) * (springdir/length).transpose()))
            + ((springdir/length) * (springdir/length).transpose()));
 
     tempdv = springs[i].c * ((springdir/length) * (springdir/length).transpose());
 
-    for (int i = 0; i < 3; i++) {
-      for (int j = 0; j < 3; j++) {
-        dfdx.coeffRef(springs[i].to * 3 + i, springs[i].from * 3 + j) += temp(i, j);
-        dfdx.coeffRef(springs[i].from * 3 + i, springs[i].to * 3 + j) += temp(i, j);
-        dfdx.coeffRef(springs[i].to * 3 + i, springs[i].to * 3 + j) -= temp(i, j);
-        dfdx.coeffRef(springs[i].from * 3 + i, springs[i].from * 3 + j) -= temp(i, j);
+    for (int i = 0; i < 2; i++) {
+      for (int j = 0; j < 2; j++) {
+        dfdx.coeffRef(springs[i].to * 2 + i, springs[i].from * 2 + j) += temp(i, j);
+        dfdx.coeffRef(springs[i].from * 2 + i, springs[i].to * 2 + j) += temp(i, j);
+        dfdx.coeffRef(springs[i].to * 2 + i, springs[i].to * 2 + j) -= temp(i, j);
+        dfdx.coeffRef(springs[i].from * 2 + i, springs[i].from * 2 + j) -= temp(i, j);
 
-        dfdv.coeffRef(springs[i].to * 3 + i, springs[i].from * 3 + j) += tempdv(i, j);
-        dfdv.coeffRef(springs[i].from * 3 + i, springs[i].to * 3 + j) += tempdv(i, j);
-        dfdv.coeffRef(springs[i].to * 3 + i, springs[i].to * 3 + j) -= tempdv(i, j);
-        dfdv.coeffRef(springs[i].from * 3 + i, springs[i].from * 3 + j) -= tempdv(i, j);
+        dfdv.coeffRef(springs[i].to * 2 + i, springs[i].from * 2 + j) += tempdv(i, j);
+        dfdv.coeffRef(springs[i].from * 2 + i, springs[i].to * 2 + j) += tempdv(i, j);
+        dfdv.coeffRef(springs[i].to * 2 + i, springs[i].to * 2 + j) -= tempdv(i, j);
+        dfdv.coeffRef(springs[i].from * 2 + i, springs[i].from * 2 + j) -= tempdv(i, j);
       }
     }
   }
@@ -315,26 +311,22 @@ void ParticleSystem::ImplicitEuler(double timestep) {
   Eigen::VectorXd f_0(vSize);
   A.setZero();
   for (int i = 0; i < particles.size(); i++) {
-    v_0[i * 3] = particles[i].v[0];
-    v_0[i * 3 + 1] = particles[i].v[1];
-    v_0[i * 3 + 2] = particles[i].v[2];
-    f_0[i * 3] = particles[i].f[0];
-    f_0[i * 3 + 1] = particles[i].f[1];
-    f_0[i * 3 + 2] = particles[i].f[2];
-    A.coeffRef(i*3,i*3) = 1/particles[i].iMass;
-    A.coeffRef(i*3+1,i*3+1) = 1/particles[i].iMass;
-    A.coeffRef(i*3+2,i*3+2) = 1/particles[i].iMass;
+    v_0[i * 2] = particles[i].v[0];
+    v_0[i * 2 + 1] = particles[i].v[1];
+    f_0[i * 2] = particles[i].f[0];
+    f_0[i * 2 + 1] = particles[i].f[1];
+    A.coeffRef(i*2,i*2) = 1/particles[i].iMass;
+    A.coeffRef(i*2+1,i*2+1) = 1/particles[i].iMass;
   }
   b = timestep * (f_0 + timestep * (dfdx * v_0));
-  A -= timestep * dfdv + timestep * timestep * dfdx;
+  A = A - (timestep * dfdv + timestep * timestep * dfdx);
   Eigen::VectorXd vdiff(vSize);
-  Eigen::ConjugateGradient<Eigen::SparseMatrix<double> > cg;
+  Eigen::ConjugateGradient<Eigen::MatrixXd > cg;
   cg.compute(A);
   vdiff = cg.solve(b);
   for (int i = 0; i < particles.size(); i++) {
-    particles[i].v[0] += vdiff[i * 3];
-    particles[i].v[1] += vdiff[i * 3 + 1];
-    particles[i].v[2] += vdiff[i * 3 + 2];
+    particles[i].v[0] += vdiff[i * 2];
+    particles[i].v[1] += vdiff[i * 2 + 1];
 
     particles[i].x += timestep * particles[i].v;
   }

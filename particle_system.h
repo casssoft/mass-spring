@@ -5,9 +5,9 @@
 #include <vector>
 class Particle {
  public:
-  Eigen::Vector3d x;
-  Eigen::Vector3d v;
-  Eigen::Vector3d f;
+  Eigen::Vector2d x;
+  Eigen::Vector2d v;
+  Eigen::Vector2d f;
   double iMass;
 };
 
