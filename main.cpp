@@ -8,6 +8,7 @@
 
 #include "chrono" // milliseconds
 #include "thread" // this_thread::sleep_for
+#include <unistd.h> // usleep
 
 namespace {
 void error_callback(int error, const char* description) {
@@ -136,7 +137,11 @@ int main(int argc, char **argv) {
       timeAhead -= curTime - prevTime;
       timeAhead += 1.0/60.0;
       if (timeAhead > 0) {
+#ifndef MACOSX
+        usleep((long)(timeAhead*1000000));
+#else
         std::this_thread::sleep_for(std::chrono::duration<double>(timeAhead));
+#endif
       }
     }
     if (curTime != timestart) {

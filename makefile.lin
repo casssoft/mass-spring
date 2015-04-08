@@ -1,6 +1,6 @@
 CC=g++
 
-CFLAGS= -g -c `PKG_CONFIG_PATH=~/seniorproject/glfw-3.1.1/src pkg-config --cflags glfw3` -I../glfw-3.1.1/include/ -Wno-write-strings -std=c++0x
+CFLAGS= -g -c `PKG_CONFIG_PATH=~/seniorproject/glfw-3.1.1/src pkg-config --cflags glfw3` -I.. -I../glfw-3.1.1/include/ -Wno-write-strings -std=c++0x
 
 LIBS=-L../glfw-3.1.1/src/ `PKG_CONFIG_PATH=~/seniorproject/glfw-3.1.1/src pkg-config --static --libs glfw3`
 

@@ -290,6 +290,7 @@ void ParticleSystem::ImplicitEuler(double timestep) {
     Eigen::Vector3d springdir = particles[springs[i].from].x - particles[springs[i].to].x;
     double length = springdir.norm();
     // Jacobian for Hookean spring force
+    //temp = ( (springdir * springdir.transpose())/(springdir.transpose() * springdir) + ( Eigen::MatrixXd::Identity(3,3) - (springdir * springdir.transpose())/(springdir.transpose() * springdir)) * ( 1- springs[i].L/length)) * springs[i].k;
     temp = springs[i].k * ( (1 - springs[i].L/length) * (Eigen::MatrixXd::Identity(3,3) - ((springdir/length) * (springdir/length).transpose()))
            + ((springdir/length) * (springdir/length).transpose()));
 
@@ -325,7 +326,7 @@ void ParticleSystem::ImplicitEuler(double timestep) {
     A.coeffRef(i*3+2,i*3+2) = 1/particles[i].iMass;
   }
   b = timestep * (f_0 + timestep * (dfdx * v_0));
-  A -= timestep * dfdv - timestep * timestep * dfdx;
+  A -= timestep * dfdv + timestep * timestep * dfdx;
   Eigen::VectorXd vdiff(vSize);
   Eigen::ConjugateGradient<Eigen::SparseMatrix<double> > cg;
   cg.compute(A);
