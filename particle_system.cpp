@@ -4,6 +4,8 @@
 
 ParticleSystem::ParticleSystem() {
   mouseP = -1;
+  stiffness = 100;
+  dampness = 10;
 }
 
 void ParticleSystem::Update(double timestep) {
@@ -57,27 +59,114 @@ void ParticleSystem::SetupTriangle() {
   springs.emplace_back();
   springs.emplace_back();
   springs.emplace_back();
-
-  double tempK = 100;
-  double tempC = 10;
-
   springs[0].to = 0;
   springs[0].from = 1;
-  springs[0].k = tempK;
+  springs[0].k = stiffness;
   springs[0].L = 50;
-  springs[0].c = tempC;
+  springs[0].c = dampness;
 
   springs[1].to = 0;
   springs[1].from = 2;
-  springs[1].k = tempK;
+  springs[1].k = stiffness;
   springs[1].L = 50;
-  springs[1].c = tempC;
+  springs[1].c = dampness;
 
   springs[2].to = 1;
   springs[2].from = 2;
-  springs[2].k = tempK;
+  springs[2].k = stiffness;
   springs[2].L = 50;
-  springs[2].c = tempC;
+  springs[2].c = dampness;
+}
+
+// Assumes this is the first Setup function called
+void ParticleSystem::SetupTriforce() {
+  // 6 particles
+  particles.emplace_back();
+  particles.emplace_back();
+  particles.emplace_back();
+  particles.emplace_back();
+  particles.emplace_back();
+  particles.emplace_back();
+  particles[0].x << 200.0, 100.0, 0.0;
+  particles[0].v << 0.0, 0.0, 0.0;
+  particles[0].iMass = 1;
+  particles[1].x << 175.0, 125.0, 0.0;
+  particles[1].v << 0.0, 10.0, 0.0;
+  particles[1].iMass = 1;
+  particles[2].x << 225.0, 125.0, 0.0;
+  particles[2].v << 0.0, 0.0, 0.0;
+  particles[2].iMass = 1;
+
+  particles[3].x << 150.0, 150.0, 0.0;
+  particles[3].v << 0.0, 0.0, 0.0;
+  particles[3].iMass = 1;
+  particles[4].x << 200.0, 150.0, 0.0;
+  particles[4].v << 0.0, 0.0, 0.0;
+  particles[4].iMass = 1;
+  particles[5].x << 250.0, 150.0, 0.0;
+  particles[5].v << 0.0, 0.0, 0.0;
+  particles[5].iMass = 1;
+
+  // 9 springs
+  springs.emplace_back();
+  springs.emplace_back();
+  springs.emplace_back();
+
+  springs.emplace_back();
+  springs.emplace_back();
+  springs.emplace_back();
+  springs.emplace_back();
+  springs.emplace_back();
+  springs.emplace_back();
+
+  springs[0].to = 0;
+  springs[0].from = 1;
+  springs[0].k = stiffness;
+  springs[0].L = 50;
+  springs[0].c = dampness;
+
+  springs[1].to = 0;
+  springs[1].from = 2;
+  springs[1].k = stiffness;
+  springs[1].L = 50;
+  springs[1].c = dampness;
+
+  springs[2].to = 1;
+  springs[2].from = 2;
+  springs[2].k = stiffness;
+  springs[2].L = 50;
+  springs[2].c = dampness;
+
+  springs[3].to = 1;
+  springs[3].from = 3;
+  springs[3].k = stiffness;
+  springs[3].L = 50;
+  springs[3].c = dampness;
+  springs[4].to = 1;
+  springs[4].from = 4;
+  springs[4].k = stiffness;
+  springs[4].L = 50;
+  springs[4].c = dampness;
+  springs[5].to = 2;
+  springs[5].from = 4;
+  springs[5].k = stiffness;
+  springs[5].L = 50;
+  springs[5].c = dampness;
+  springs[6].to = 2;
+  springs[6].from = 5;
+  springs[6].k = stiffness;
+  springs[6].L = 50;
+  springs[6].c = dampness;
+  springs[7].to = 3;
+  springs[7].from = 4;
+  springs[7].k = stiffness;
+  springs[7].L = 50;
+  springs[7].c = dampness;
+  springs[8].to = 4;
+  springs[8].from = 5;
+  springs[8].k = stiffness;
+  springs[8].L = 50;
+  springs[8].c = dampness;
 }
 
 void ParticleSystem::SetupBall(double x, double y) {
@@ -98,15 +187,15 @@ void ParticleSystem::SetupMouseSpring(int to) {
   tempS->to = to;
   tempS->from = mouseP;
   tempS->L = 50;
-  tempS->k = 100;
-  tempS->c = 10;
+  tempS->k = stiffness;
+  tempS->c = dampness;
 }
 
 void ParticleSystem::SetMouseSpring(bool enabled) {
   for (int i = 0; i < mouseSprings.size(); ++i) {
     if (enabled) {
-      springs[mouseSprings[i]].k = 100;
-      springs[mouseSprings[i]].c = 10;
+      springs[mouseSprings[i]].k = stiffness;
+      springs[mouseSprings[i]].c = dampness;
     } else {
       springs[mouseSprings[i]].k = 0;
       springs[mouseSprings[i]].c = 0;
@@ -120,6 +209,18 @@ void ParticleSystem::SetMousePos(double x, double y) {
      particles[mouseP].x << x, y, 0;
      particles[mouseP].v << 0, 0, 0;
    }
+}
+
+void ParticleSystem::Reset() {
+  mouseP = -1;
+  particles.clear();
+  springs.clear();
+  mouseSprings.clear();
+}
+
+void ParticleSystem::SetSpringProperties(double k, double c) {
+  stiffness = k;
+  dampness = c;
 }
 
 void ParticleSystem::ComputeForces() {

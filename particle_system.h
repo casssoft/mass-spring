@@ -20,22 +20,19 @@ class Spring {
   double c; //damping
 };
 
-class LineSegment {
- public:
- Eigen::Vector3d x1;
- Eigen::Vector3d x2;
-};
-
 class ParticleSystem {
  public:
   ParticleSystem();
   void Update(double timestep);
   float* GetPositions2d(int* size);
   void SetupTriangle();
+  void SetupTriforce();
   void SetupBall(double x, double y);
   void SetupMouseSpring(int to);
   void SetMouseSpring(bool enabled);
   void SetMousePos(double x, double y);
+  void Reset();
+  void SetSpringProperties(double k, double c);
 
   std::vector<Spring> springs;
   std::vector<Particle> particles;
@@ -46,6 +43,8 @@ class ParticleSystem {
   std::vector<double> phaseTemp;
   int mouseP;
   std::vector<int> mouseSprings;
+  double stiffness;
+  double dampness;
 };
 #endif // PARTICLE_SYSTEM_H__
 
