@@ -8,6 +8,7 @@ ParticleSystem::ParticleSystem() {
   mouseP = -1;
   stiffness = 100;
   dampness = 10;
+  gravity = 0;
 }
 
 void ParticleSystem::Update(double timestep, bool implicit) {
@@ -43,6 +44,25 @@ float* ParticleSystem::GetPositions2d(int* size) {
   posTemp[*size - 2] = DDWIDTH;
   posTemp[*size - 1] = DDHEIGHT - 20;
   return posTemp.data();
+}
+
+void ParticleSystem::SetupSingleSpring() {
+  particles.emplace_back();
+  particles.emplace_back();
+  particles[0].x << 100.0, 100.0;
+  particles[0].v << -100, 0.0;
+  particles[0].iMass = 1;
+  particles[1].x << 100.0, 150.0;
+  particles[1].v << 100.0, 0.0;
+  particles[1].iMass = 1;
+
+  springs.emplace_back();
+  springs[0].to = 0;
+  springs[0].from = 1;
+  springs[0].k = stiffness;
+  springs[0].L = 50;
+  springs[0].c = dampness;
+
 }
 
 // Assumes this is the first Setup function called
@@ -230,7 +250,7 @@ void ParticleSystem::SetSpringProperties(double k, double c) {
 void ParticleSystem::ComputeForces() {
   //Zero all forces
   for (int i = 0; i < particles.size(); i++) {
-    particles[i].f << 0.0, 200.0;
+    particles[i].f << 0.0, gravity;
   }
   //Compute spring forces
   int sSize = springs.size();
@@ -292,19 +312,15 @@ void ParticleSystem::ImplicitEuler(double timestep) {
 
     tempdv = springs[i].c * ((springdir/length) * (springdir/length).transpose());
 
-    for (int i = 0; i < 2; i++) {
-      for (int j = 0; j < 2; j++) {
-        dfdx.coeffRef(springs[i].to * 2 + i, springs[i].from * 2 + j) += temp(i, j);
-        dfdx.coeffRef(springs[i].from * 2 + i, springs[i].to * 2 + j) += temp(i, j);
-        dfdx.coeffRef(springs[i].to * 2 + i, springs[i].to * 2 + j) -= temp(i, j);
-        dfdx.coeffRef(springs[i].from * 2 + i, springs[i].from * 2 + j) -= temp(i, j);
-
-        dfdv.coeffRef(springs[i].to * 2 + i, springs[i].from * 2 + j) += tempdv(i, j);
-        dfdv.coeffRef(springs[i].from * 2 + i, springs[i].to * 2 + j) += tempdv(i, j);
-        dfdv.coeffRef(springs[i].to * 2 + i, springs[i].to * 2 + j) -= tempdv(i, j);
-        dfdv.coeffRef(springs[i].from * 2 + i, springs[i].from * 2 + j) -= tempdv(i, j);
-      }
-    }
+    dfdx.block<2,2>(springs[i].to * 2, springs[i].from * 2) += temp;
+    dfdx.block<2,2>(springs[i].from * 2, springs[i].to * 2) += temp;
+    dfdx.block<2,2>(springs[i].to * 2, springs[i].to * 2) -= temp;
+    dfdx.block<2,2>(springs[i].from * 2, springs[i].from * 2) -= temp;
+    
+    dfdv.block<2,2>(springs[i].to * 2, springs[i].from * 2) += tempdv;
+    dfdv.block<2,2>(springs[i].from * 2, springs[i].to * 2) += tempdv;
+    dfdv.block<2,2>(springs[i].to * 2, springs[i].to * 2) -= tempdv;
+    dfdv.block<2,2>(springs[i].from * 2, springs[i].from * 2) -= tempdv;
   }
   ComputeForces();
   Eigen::VectorXd v_0(vSize);

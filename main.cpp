@@ -15,7 +15,7 @@ void error_callback(int error, const char* description) {
   fprintf(stderr, "%s\n", description);
 }
 int changeSetup = 0;
-bool limitFps = false;
+bool limitFps = true;
 bool recalculateFps = false;
 bool implicitUpdate = false;
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
@@ -69,11 +69,12 @@ int main(int argc, char **argv) {
 
   // Particle system setup
   ParticleSystem m;
-  if (argc == 3)
+  if (argc == 4) {
     m.SetSpringProperties(atof(argv[1]), atof(argv[2]));
+    implicitUpdate = atoi(argv[3]);
+  }
 
-  m.SetupTriangle();
-  m.SetupMouseSpring(0);
+  m.SetupSingleSpring();
 
   // Frames per second set up
   double timestart = glfwGetTime();

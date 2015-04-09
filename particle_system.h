@@ -25,6 +25,7 @@ class ParticleSystem {
   ParticleSystem();
   void Update(double timestep, bool implicit);
   float* GetPositions2d(int* size);
+  void SetupSingleSpring();
   void SetupTriangle();
   void SetupTriforce();
   void SetupBall(double x, double y);
@@ -46,6 +47,7 @@ class ParticleSystem {
   std::vector<int> mouseSprings;
   double stiffness;
   double dampness;
+  double gravity;
 };
 #endif // PARTICLE_SYSTEM_H__
 
