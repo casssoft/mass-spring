@@ -74,7 +74,9 @@ int main(int argc, char **argv) {
     implicitUpdate = atoi(argv[3]);
   }
 
-  m.SetupSingleSpring();
+  //m.SetupSingleSpring();
+  m.SetupBridge2();
+  //m.SetupMouseSpring(10);
 
   // Frames per second set up
   double timestart = glfwGetTime();
@@ -121,10 +123,11 @@ int main(int argc, char **argv) {
 
     // Draw
     int pSize;
+    int cSize;
     float* points = m.GetPositions2d(&pSize);
-
+    float* colors = m.GetColors(&cSize);
     DrawDelegate::BeginFrame();
-    DrawDelegate::DrawLines(points, pSize);
+    DrawDelegate::DrawLines(points, pSize, colors, cSize);
     glfwSwapBuffers(window);
     glfwPollEvents();
 

@@ -72,21 +72,26 @@ PFNGLUNIFORM3FPROC glUniform3f = NULL;
 char * vertexSource =
 "#version 120\n"
 "attribute vec2 position;\n"
+"attribute vec3 colorQ;\n"
 "uniform mat4 viewMatrix;\n"
+"varying vec3 fragColor;\n"
 "void main() {\n"
+"  fragColor = colorQ;\n"
 "  gl_Position = viewMatrix * (vec4(0.375,0.375,0,0) + vec4(position,1.0,1.0));\n"
 "}\n";
 char * fragmentSource =
 "#version 120\n"
+"varying vec3 fragColor;\n"
 "void main(void) {\n"
-"gl_FragColor = vec4(1.0,0,0,1.0);\n"
+"gl_FragColor = vec4(clamp(fragColor, vec3(0,0,0), vec3(1,1,1)),1.0);\n"
 "}\n";
 
 GLuint shaderProgram;
 GLuint positionAttribute;
+GLuint colorAttribute;
 GLuint viewMatrixUniform;
-GLuint fragColorUniform;
 GLuint pointVBO;
+GLuint colorVBO;
 int height = DDHEIGHT;
 int width = DDWIDTH;
 float right = width;
@@ -193,27 +198,34 @@ bool DrawDelegate::SetupOpenGL() {
 
 
   positionAttribute = glGetAttribLocation(shaderProgram,"position");
+  colorAttribute = glGetAttribLocation(shaderProgram,"colorQ");
   viewMatrixUniform = glGetUniformLocation(shaderProgram, "viewMatrix");
   glEnableVertexAttribArray(positionAttribute);
+  glEnableVertexAttribArray(colorAttribute);
   /*-------------------------------------------------------------------------------------------------------*/
   glClearColor(1,1,1,1);
 
 
-  float abs[] = {0.0f,0.0f, 20.0f,20.0f, 50.0f, 15.0f, 0.0f, 0.0f};
-
-  glGenBuffers(1, &pointVBO);
-  glBindBuffer(GL_ARRAY_BUFFER, pointVBO);
+  glGenBuffers(1, &colorVBO);
+  glBindBuffer(GL_ARRAY_BUFFER, colorVBO);
   glBufferData(GL_ARRAY_BUFFER, sizeof(float)*1000, NULL, GL_DYNAMIC_DRAW);
   glBindBuffer(GL_ARRAY_BUFFER, 0);
 
-  glClearColor(1,1,1,1);
+  glGenBuffers(1, &pointVBO);
+  glBindBuffer(GL_ARRAY_BUFFER, pointVBO);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(float)*900, NULL, GL_DYNAMIC_DRAW);
+  glBindBuffer(GL_ARRAY_BUFFER, 0);
 
+  glClearColor(1,1,1,1);
+  glLineWidth(5);
   return 1;
 }
 
 void DrawDelegate::BeginFrame() {
   glClear(GL_COLOR_BUFFER_BIT);
   glColor4f(1.0,1.0,1.0,1.0);
+  glBindBuffer(GL_ARRAY_BUFFER, colorVBO);
+  glVertexAttribPointer(colorAttribute, 3, GL_FLOAT, false, 0, 0);
   glBindBuffer(GL_ARRAY_BUFFER, pointVBO);
   glVertexAttribPointer(positionAttribute, 2, GL_FLOAT, false, 0, 0);
   glUniformMatrix4fv(viewMatrixUniform, 1, true, viewmatrix);
@@ -221,11 +233,17 @@ void DrawDelegate::BeginFrame() {
 
 namespace {
   int DDbufferSize = 1000;
+  int DDcolorbufferSize = 900;
 };
-void DrawDelegate::DrawLines(float* pos, int npos) {
-  //glBindBuffer(GL_ARRAY_BUFFER, pointVBO);
+void DrawDelegate::DrawLines(float* pos, int npos, float* color, int ncolor) {
   while(npos > DDbufferSize)
     DDbufferSize *= 2;
+  while (ncolor > DDcolorbufferSize)
+    DDcolorbufferSize *= 2;
+  glBindBuffer(GL_ARRAY_BUFFER, colorVBO);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(float)*DDcolorbufferSize, NULL, GL_DYNAMIC_DRAW);
+  glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(float) * ncolor, color);
+  glBindBuffer(GL_ARRAY_BUFFER, pointVBO);
   glBufferData(GL_ARRAY_BUFFER, sizeof(float)*DDbufferSize, NULL, GL_DYNAMIC_DRAW);
   glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(float) * npos, pos);
 

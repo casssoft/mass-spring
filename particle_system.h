@@ -25,6 +25,7 @@ class ParticleSystem {
   ParticleSystem();
   void Update(double timestep, bool implicit);
   float* GetPositions2d(int* size);
+  float* GetColors(int* size);
   void SetupSingleSpring();
   void SetupTriangle();
   void SetupTriforce();
@@ -32,16 +33,20 @@ class ParticleSystem {
   void SetupMouseSpring(int to);
   void SetMouseSpring(bool enabled);
   void SetMousePos(double x, double y);
+  void SetupBridge();
+  void SetupBridge2();
   void Reset();
   void SetSpringProperties(double k, double c);
 
   std::vector<Spring> springs;
   std::vector<Particle> particles;
+  std::vector<Particle> fixed_points;
  private:
   void ComputeForces();
   void ExplicitEuler(double timestep);
   void ImplicitEuler(double timestep);
   std::vector<float> posTemp;
+  std::vector<float> colorTemp;
   std::vector<double> phaseTemp;
   int mouseP;
   std::vector<int> mouseSprings;
