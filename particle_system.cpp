@@ -56,6 +56,22 @@ float* ParticleSystem::GetPositions2d(int* size) {
   return posTemp.data();
 }
 
+static void LerpColors(double strain, float*color3) {
+   if (strain < 1) {
+      *(color3) = 0;
+      *(color3+1) = 0;
+      *(color3+2) = strain;
+   } else if (strain < 2) {
+      *(color3) = strain - 1;
+      *(color3+1) = 0;
+      *(color3+2) = strain;
+   } else {
+      *(color3) = 1;
+      *(color3+1) = 0;
+      *(color3+2) = 1 - (strain -2);
+   }
+}
+
 float* ParticleSystem::GetColors(int* size) {
   *size = springs.size()*6 + 6;
   colorTemp.resize(*size);
@@ -73,14 +89,17 @@ float* ParticleSystem::GetColors(int* size) {
     float strain = ((to->x - from->x).norm() - springs[i].L) / springs[i].L;
     if (strain < 0) strain *= -1;
 
-    strain *= 100 + springs[i].k/10000;
-    colorTemp[i*6] = strain;
+    strain *= 2 + springs[i].k/1000;
+    LerpColors(strain, &(colorTemp[i*6]));
+    /*colorTemp[i*6] = strain - 1;
     colorTemp[i*6 + 1] = 0;
-    colorTemp[i*6 + 2] = strain - 1;
-    colorTemp[i*6 + 3] = strain;
+    colorTemp[i*6 + 2] = strain;
+*/
+    LerpColors(strain, &(colorTemp[i*6+3]));
+/*    colorTemp[i*6 + 3] = strain - 1;
     colorTemp[i*6 + 4] = 0;
-    colorTemp[i*6 + 5] = strain - 1;
-
+    colorTemp[i*6 + 5] = strain;
+*/
   }
   colorTemp[*size - 6] = 0.0;
   colorTemp[*size - 5] = 0.0;
@@ -293,7 +312,7 @@ void ParticleSystem::SetupBridge2() {
     particles[i*2].v << 0, 0;
     particles[i*2].iMass = 1;
     particles.emplace_back();
-    particles[i*2+1].x << 100 + i * 50, 350;
+    particles[i*2+1].x << 125 + i * 50, 350;
     particles[i*2+1].v << 0, 0;
     particles[i*2+1].iMass = 1;
     last = i*2;
@@ -316,18 +335,18 @@ void ParticleSystem::SetupBridge2() {
   for (int i = 0; i < (DDWIDTH-150)/50 - 1; i++) {
     springs.emplace_back();
     curS++;
-    springs[curS].to = i*2+ (i%2);
-    springs[curS].from = (i+1)*2 + ((i+1)%2);
+    springs[curS].to = i*2+ ((i+1)%2);
+    springs[curS].from = (i+1)*2 + ((i)%2);
     springs[curS].L = 70.71;
     springs[curS].k = stiffness;
     springs[curS].c = dampness;
-    springs.emplace_back();
+    /*springs.emplace_back();
     curS++;
     springs[curS].to = i*2+ ((i+1)%2);
     springs[curS].from = (i+ ((i)%2))*2 + ((i)%2);
     springs[curS].L = 70.71;
     springs[curS].k = stiffness;
-    springs[curS].c = dampness;
+    springs[curS].c = dampness;*/
   }
 
   for (int i = 0; i < (DDWIDTH-150)/50 - 1; i++) {
@@ -404,15 +423,15 @@ void ParticleSystem::SetupBridge() {
     springs[curS].to = i*2+ (i%2);
     springs[curS].from = (i+1)*2 + ((i+1)%2);
     springs[curS].L = 70.71;
-    springs[curS].k = stiffness;
-    springs[curS].c = dampness;
-    /*springs.emplace_back();
+    springs[curS].k = stiffness/10;
+    springs[curS].c = dampness/10;
+    springs.emplace_back();
     curS++;
     springs[curS].to = i*2+ ((i+1)%2);
-    springs[curS].from = (i+ ((i)%2))*2 + ((i)%2);
+    springs[curS].from = (i+1)*2 + ((i)%2);
     springs[curS].L = 70.71;
-    springs[curS].k = stiffness;
-    springs[curS].c = dampness;*/
+    springs[curS].k = stiffness/10;
+    springs[curS].c = dampness/10;
   }
 
   for (int i = 0; i < (DDWIDTH-150)/50 - 1; i++) {

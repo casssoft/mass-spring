@@ -75,8 +75,8 @@ int main(int argc, char **argv) {
   }
 
   //m.SetupSingleSpring();
-  m.SetupBridge2();
-  //m.SetupMouseSpring(10);
+  m.SetupBridge();
+  m.SetupMouseSpring(10);
 
   // Frames per second set up
   double timestart = glfwGetTime();
