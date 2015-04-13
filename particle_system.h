@@ -24,7 +24,8 @@ class ParticleSystem {
  public:
   ParticleSystem();
   void Update(double timestep, bool implicit);
-  float* GetPositions2d(int* size);
+  float* GetPositions2d(int* size, double x, double y, double zoom);
+  void GetCameraPosAndSize(double* x, double* y, double* zoom);
   float* GetColors(int* size);
   void SetupSingleSpring();
   void SetupTriangle();
@@ -53,6 +54,8 @@ class ParticleSystem {
   double stiffness;
   double dampness;
   double gravity;
+  void AddSpring(int to, int from);
+  void GetSpringP(int i, Particle*& to, Particle*& from);
 };
 #endif // PARTICLE_SYSTEM_H__
 

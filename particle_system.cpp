@@ -8,7 +8,7 @@ ParticleSystem::ParticleSystem() {
   mouseP = -1;
   stiffness = 100;
   dampness = 10;
-  gravity = 400;
+  gravity = 9.8;
 }
 
 void ParticleSystem::Update(double timestep, bool implicit) {
@@ -30,30 +30,65 @@ void ParticleSystem::Update(double timestep, bool implicit) {
   }
 }
 
-float* ParticleSystem::GetPositions2d(int* size) {
+float* ParticleSystem::GetPositions2d(int* size, double x, double y, double zoom) {
   *size = springs.size()*4 + 4;
   posTemp.resize(*size);
   for (int i = 0; i < springs.size(); i++) {
     Particle* to,*from;
-    if (springs[i].to < 0)
-      to = &(fixed_points[springs[i].to * -1 - 1]);
-    else
-      to = &(particles[springs[i].to]);
-    if (springs[i].from < 0)
-      from = &(fixed_points[springs[i].from * -1 - 1]);
-    else
-      from = &(particles[springs[i].from]);
+    GetSpringP(i, to, from);
 
-    posTemp[i*4] = (float)to->x[0];
-    posTemp[i*4 + 1] = (float)to->x[1];
-    posTemp[i*4 + 2] = (float)from->x[0];
-    posTemp[i*4 + 3] = (float)from->x[1];
+    posTemp[i*4] = ((float)to->x[0] - x) * zoom;
+    posTemp[i*4 + 1] = ((float)to->x[1] - y) * zoom;
+    posTemp[i*4 + 2] = ((float)from->x[0] - x) * zoom;
+    posTemp[i*4 + 3] = ((float)from->x[1] - y) * zoom;
   }
   posTemp[*size - 4] = 0;
-  posTemp[*size - 3] = DDHEIGHT - 20;
+  posTemp[*size - 3] = (100 - y) * zoom;
   posTemp[*size - 2] = DDWIDTH;
-  posTemp[*size - 1] = DDHEIGHT - 20;
+  posTemp[*size - 1] = (100 - y) * zoom;
   return posTemp.data();
+}
+
+void ParticleSystem::GetCameraPosAndSize(double* x, double*y, double* zoom) {
+  *x = 0;
+  *y = 0;
+  for (int i = 0; i < particles.size(); ++i) {
+    *x += particles[i].x[0];
+    *y += particles[i].x[1];
+  }
+  for (int i = 0; i < fixed_points.size(); ++i) {
+    *x += fixed_points[i].x[0];
+    *y += fixed_points[i].x[1];
+  }
+  *x /= particles.size() + fixed_points.size();
+  *y /= particles.size() + fixed_points.size();
+  double out;
+  out = .01;
+  for (int i = 0; i < particles.size(); ++i) {
+    if (particles[i].x[0] - *x > out)
+      out = particles[i].x[0] - *x;
+    if (*x - particles[i].x[0] > out)
+      out = *x - particles[i].x[0];
+    if (particles[i].x[1] - *y > out)
+      out = particles[i].x[1] - *y;
+    if (*y - particles[i].x[1] > out)
+      out = *y - particles[i].x[1];
+  }
+  for (int i = 0; i < fixed_points.size(); ++i) {
+    if (i == mouseP) continue;
+    if (fixed_points[i].x[0] - *x > out)
+      out = fixed_points[i].x[0] - *x;
+    if (*x - fixed_points[i].x[0] > out)
+      out = *x - fixed_points[i].x[0];
+    if (fixed_points[i].x[1] - *y > out)
+      out = fixed_points[i].x[1] - *y;
+    if (*y - fixed_points[i].x[1] > out)
+      out = *y - fixed_points[i].x[1];
+  }
+  *zoom = (DDWIDTH/2 - 50) / out;
+  if (*zoom < 0.001) *zoom = 0.001;
+  *x -= (DDWIDTH/2) / (*zoom);
+  *y -= (DDHEIGHT/2) / (*zoom);
 }
 
 static void LerpColors(double strain, float*color3) {
@@ -77,19 +112,12 @@ float* ParticleSystem::GetColors(int* size) {
   colorTemp.resize(*size);
   for (int i = 0; i < springs.size(); i++) {
     Particle* to,*from;
-    if (springs[i].to < 0)
-      to = &(fixed_points[springs[i].to * -1 - 1]);
-    else
-      to = &(particles[springs[i].to]);
-    if (springs[i].from < 0)
-      from = &(fixed_points[springs[i].from * -1 - 1]);
-    else
-      from = &(particles[springs[i].from]);
+    GetSpringP(i, to, from);
 
     float strain = ((to->x - from->x).norm() - springs[i].L) / springs[i].L;
     if (strain < 0) strain *= -1;
 
-    strain *= 2 + springs[i].k/1000;
+    strain *= 10 + springs[i].k/1000;
     LerpColors(strain, &(colorTemp[i*6]));
     /*colorTemp[i*6] = strain - 1;
     colorTemp[i*6 + 1] = 0;
@@ -113,18 +141,18 @@ float* ParticleSystem::GetColors(int* size) {
 void ParticleSystem::SetupSingleSpring() {
   particles.emplace_back();
   particles.emplace_back();
-  particles[0].x << 100.0, 100.0;
-  particles[0].v << -100, 0.0;
+  particles[0].x << 0.0, 0.0;
+  particles[0].v << -1, 0.0;
   particles[0].iMass = 1;
-  particles[1].x << 100.0, 150.0;
-  particles[1].v << 100.0, 0.0;
+  particles[1].x << 0.0, 0.1;
+  particles[1].v << 1.0, 0.0;
   particles[1].iMass = 1;
 
   springs.emplace_back();
   springs[0].to = 0;
   springs[0].from = 1;
   springs[0].k = stiffness;
-  springs[0].L = 50;
+  springs[0].L = .1;
   springs[0].c = dampness;
 
 }
@@ -134,36 +162,19 @@ void ParticleSystem::SetupTriangle() {
   particles.emplace_back();
   particles.emplace_back();
   particles.emplace_back();
-  particles[0].x << 100.0, 100.0;
+  particles[0].x << 0.0, 0.0;
   particles[0].v << 0.0, 0.0;
   particles[0].iMass = 1;
-  particles[1].x << 200.0, 100.0;
-  particles[1].v << 0.0, 10.0;
+  particles[1].x << 1.0, 0.0;
+  particles[1].v << 0.0, 0.0;
   particles[1].iMass = 1;
-  particles[2].x << 200.0, 200.0;
+  particles[2].x << 1.0, 1.0;
   particles[2].v << 0.0, 0.0;
   particles[2].iMass = 1;
 
-  springs.emplace_back();
-  springs.emplace_back();
-  springs.emplace_back();
-  springs[0].to = 0;
-  springs[0].from = 1;
-  springs[0].k = stiffness;
-  springs[0].L = 50;
-  springs[0].c = dampness;
-
-  springs[1].to = 0;
-  springs[1].from = 2;
-  springs[1].k = stiffness;
-  springs[1].L = 50;
-  springs[1].c = dampness;
-
-  springs[2].to = 1;
-  springs[2].from = 2;
-  springs[2].k = stiffness;
-  springs[2].L = 50;
-  springs[2].c = dampness;
+  AddSpring(0, 1);
+  AddSpring(0, 2);
+  AddSpring(1, 2);
 }
 
 // Assumes this is the first Setup function called
@@ -274,7 +285,7 @@ void ParticleSystem::SetupMouseSpring(int to) {
   Spring* tempS = &(springs[springs.size() - 1]);
   tempS->to = to;
   tempS->from = -1 * mouseP - 1;
-  tempS->L = 50;
+  tempS->L = 6;
   tempS->k = stiffness;
   tempS->c = dampness;
 }
@@ -303,68 +314,47 @@ void ParticleSystem::SetupBridge2() {
   fixed_points.emplace_back();
   fixed_points.emplace_back();
 
-  fixed_points[0].x << 50, 350;
-  fixed_points[1].x << DDWIDTH - 50, 350;
-  int last;
-  for (int i = 0; i < (DDWIDTH-150)/50; i++) {
+  int bridgeL = 10;
+  fixed_points[0].x << -6, 0;
+  fixed_points[1].x << bridgeL*6, 0;
+  for (int i = 0; i < bridgeL; ++i) {
     particles.emplace_back();
-    particles[i*2].x << 100 + i * 50, 300;
-    particles[i*2].v << 0, 0;
-    particles[i*2].iMass = 1;
+    particles[i].x << i* 6, 0;
+    particles[i].v << 0, 0;
+    particles[i].iMass = 1;
+  }
+  int l2start = bridgeL;
+  for (int i = bridgeL; i < bridgeL*2 +1; i++) {
     particles.emplace_back();
-    particles[i*2+1].x << 125 + i * 50, 350;
-    particles[i*2+1].v << 0, 0;
-    particles[i*2+1].iMass = 1;
-    last = i*2;
-  }
-  springs.emplace_back();
-  springs.emplace_back();
-  springs[0].to = 1;
-  springs[0].from = -1;
-  springs[0].L = 50;
-  springs[0].k = stiffness;
-  springs[0].c = dampness;
-
-  springs[1].to = last + 1;
-  springs[1].from = -2;
-  springs[1].L = 50;
-  springs[1].k = stiffness;
-  springs[1].c = dampness;
-
-  int curS = springs.size() - 1;
-  for (int i = 0; i < (DDWIDTH-150)/50 - 1; i++) {
-    springs.emplace_back();
-    curS++;
-    springs[curS].to = i*2+ ((i+1)%2);
-    springs[curS].from = (i+1)*2 + ((i)%2);
-    springs[curS].L = 70.71;
-    springs[curS].k = stiffness;
-    springs[curS].c = dampness;
-    /*springs.emplace_back();
-    curS++;
-    springs[curS].to = i*2+ ((i+1)%2);
-    springs[curS].from = (i+ ((i)%2))*2 + ((i)%2);
-    springs[curS].L = 70.71;
-    springs[curS].k = stiffness;
-    springs[curS].c = dampness;*/
+    particles[i].x << (i - bridgeL)* 6 - 3, -6;
+    particles[i].v << 0, 0;
+    particles[i].iMass = 1;
   }
 
-  for (int i = 0; i < (DDWIDTH-150)/50 - 1; i++) {
-    springs.emplace_back();
-    curS++;
-    springs[curS].to = i*2;
-    springs[curS].from = (i+1)*2;
-    springs[curS].L = 50;
-    springs[curS].k = stiffness;
-    springs[curS].c = dampness;
-    springs.emplace_back();
-    curS++;
-    springs[curS].to = i*2 + 1;
-    springs[curS].from = (i+1)*2 + 1;
-    springs[curS].L = 50;
-    springs[curS].k = stiffness;
-    springs[curS].c = dampness;
+  AddSpring(0, -1);
+  AddSpring(bridgeL - 1, -2);
+  AddSpring(l2start, -1);
+  AddSpring(l2start + bridgeL, -2);
+
+  for (int i = 0; i < bridgeL - 1; ++i) {
+    AddSpring(i, i+1);
   }
+  for (int i = l2start; i < bridgeL*2; ++i) {
+    AddSpring(i, i+1);
+  }
+  for (int i = 0; i < bridgeL; ++i) {
+    AddSpring(l2start + i, i);
+    AddSpring(i, l2start + i + 1);
+  }
+  /*
+  for (int i = 0; i < bridgeL - 1; i++) {
+    AddSpring(i*2 + ((i+1)%2), (i+1)*2 + (i%2));
+  }
+
+  for (int i = 0; i < bridgeL - 1; i++) {
+    AddSpring(i*2, (i+1)*2);
+    AddSpring(i*2 + 1, (i+1)*2 + 1);
+  }*/
 }
 void ParticleSystem::SetupBridge() {
   fixed_points.emplace_back();
@@ -474,14 +464,7 @@ void ParticleSystem::ComputeForces() {
   int sSize = springs.size();
   for (int i = 0; i < sSize; i++) {
     Particle *to, *from;
-    if (springs[i].to < 0)
-      to = &(fixed_points[springs[i].to * -1 - 1]);
-    else
-      to = &(particles[springs[i].to]);
-    if (springs[i].from < 0)
-      from = &(fixed_points[springs[i].from * -1 - 1]);
-    else
-      from = &(particles[springs[i].from]);
+    GetSpringP(i, to, from);
 
     double length = (to->x - from->x).norm();
     Eigen::Vector2d springdir = (to->x - from->x) / length;
@@ -587,4 +570,27 @@ void ParticleSystem::ImplicitEuler(double timestep) {
 
     particles[i].x += timestep * particles[i].v;
   }
+}
+
+void ParticleSystem::AddSpring(int to, int from) {
+  springs.emplace_back();
+  int index = springs.size() - 1;
+  springs[index].to = to;
+  springs[index].from = from;
+  springs[index].k = stiffness;
+  springs[index].c = dampness;
+  Particle*s1, *s2;
+  GetSpringP(index, s1, s2);
+  springs[index].L = (s1->x - s2->x).norm();
+}
+
+void ParticleSystem::GetSpringP(int i, Particle*& to, Particle*& from) {
+  if (springs[i].to < 0)
+    to = &(fixed_points[springs[i].to * -1 - 1]);
+  else
+    to = &(particles[springs[i].to]);
+  if (springs[i].from < 0)
+    from = &(fixed_points[springs[i].from * -1 - 1]);
+  else
+    from = &(particles[springs[i].from]);
 }

@@ -47,6 +47,13 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
     }
   }
 }
+
+int GridFloor(double x, int mpG) {
+  int ret = (int)(x/mpG);
+  if (x <0) ret -= 1;
+  return ret * mpG;
+}
+
 }; // namespace
 
 int main(int argc, char **argv) {
@@ -75,8 +82,9 @@ int main(int argc, char **argv) {
   }
 
   //m.SetupSingleSpring();
-  m.SetupBridge();
-  m.SetupMouseSpring(10);
+  m.SetupBridge2();
+  m.SetupMouseSpring(5);
+  //m.SetupTriangle();
 
   // Frames per second set up
   double timestart = glfwGetTime();
@@ -92,6 +100,12 @@ int main(int argc, char **argv) {
   glfwGetCursorPos(window, &mouseX, &mouseY);
   m.SetMousePos(mouseX, mouseY);
 
+  // Camera setup
+  double x, y, zoom;
+
+  x = 0; y = 0; zoom = 1;
+  std::vector<float> gridpoints;
+  std::vector<float> gridcolors;
   while (!glfwWindowShouldClose(window)) {
 
     // Handle changing setup
@@ -119,15 +133,55 @@ int main(int argc, char **argv) {
 
     // Set mouse spring pos
     glfwGetCursorPos(window, &mouseX, &mouseY);
-    m.SetMousePos(mouseX, mouseY);
+    m.SetMousePos(mouseX/zoom + x, mouseY/zoom + y);
 
     // Draw
     int pSize;
     int cSize;
-    float* points = m.GetPositions2d(&pSize);
+    m.GetCameraPosAndSize(&x, &y, &zoom);
+    float* points = m.GetPositions2d(&pSize, x, y, zoom);
     float* colors = m.GetColors(&cSize);
+
+    // Make grid
+    int mpG = 5;
+
+    int x_flr = GridFloor(x, mpG);
+    int y_flr = GridFloor(y, mpG);
+    int xGrids = GridFloor(DDWIDTH/zoom + x, mpG) - GridFloor(x, mpG) + 1;
+    int yGrids = GridFloor(DDHEIGHT/zoom + y, mpG) - GridFloor(y, mpG) + 1;
+    gridpoints.resize((xGrids + yGrids) * 4);
+    gridcolors.resize((xGrids + yGrids) * 6);
+    for (int i = 0; i < xGrids; ++i) {
+      gridpoints[i*4] = (i*mpG + x_flr - x) * zoom;
+      gridpoints[i*4 + 1] = 0;
+      gridpoints[i*4 + 2] = (i*mpG + x_flr - x) * zoom;
+      gridpoints[i*4 + 3] = DDHEIGHT;
+      gridcolors[i*6] = 0;
+      gridcolors[i*6 + 1] = 1;
+      gridcolors[i*6 + 2] = 0;
+      gridcolors[i*6 + 3] = 0;
+      gridcolors[i*6 + 4] = 1;
+      gridcolors[i*6 + 5] = 0;
+    }
+    for (int i = xGrids; i < xGrids + yGrids; ++i) {
+      gridpoints[i*4] = 0;
+      gridpoints[i*4 + 1] = ((i - xGrids) *mpG + y_flr - y) * zoom;
+      gridpoints[i*4 + 2] = DDWIDTH;
+      gridpoints[i*4 + 3] = ((i - xGrids)* mpG + y_flr - y) * zoom;
+      gridcolors[i*6] = 0;
+      gridcolors[i*6 + 1] = 1;
+      gridcolors[i*6 + 2] = 0;
+      gridcolors[i*6 + 3] = 0;
+      gridcolors[i*6 + 4] = 1;
+      gridcolors[i*6 + 5] = 0;
+    }
     DrawDelegate::BeginFrame();
+    DrawDelegate::SetLineSize(1);
+    DrawDelegate::DrawLines(gridpoints.data(), (xGrids + yGrids) * 4, gridcolors.data(), (xGrids + yGrids) * 6);
+    DrawDelegate::SetLineSize(4);
     DrawDelegate::DrawLines(points, pSize, colors, cSize);
+
+
     glfwSwapBuffers(window);
     glfwPollEvents();
 
@@ -155,7 +209,7 @@ int main(int argc, char **argv) {
       recalculateFps = false;
       timestart = curTime;
       frames = 0;
-      printf("Frames per second: %f Springs: %d Implicit: %d\n", 1.0/secondsPerFrame, m.springs.size(), (int) implicitUpdate);
+      printf("Frames per second: %f Springs: %d Implicit: %d\n x: %f y:%f zoom:%f\n", 1.0/secondsPerFrame, m.springs.size(), (int) implicitUpdate, x, y, zoom);
     }
   }
 

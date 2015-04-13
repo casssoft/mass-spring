@@ -8,6 +8,7 @@
 namespace DrawDelegate {
 
   bool SetupOpenGL();
+  void SetLineSize(float size);
   void DrawLines(float* pos, int npos, float* color, int ncolor);
   void BeginFrame();
 }

@@ -221,6 +221,10 @@ bool DrawDelegate::SetupOpenGL() {
   return 1;
 }
 
+void DrawDelegate::SetLineSize(float size) {
+  glLineWidth(size);
+}
+
 void DrawDelegate::BeginFrame() {
   glClear(GL_COLOR_BUFFER_BIT);
   glColor4f(1.0,1.0,1.0,1.0);
