@@ -7,14 +7,14 @@ LIBS=-L../glfw-3.1.1/src/ `PKG_CONFIG_PATH=~/seniorproject/glfw-3.1.1/src pkg-co
 EXE=explicitspring
 
 
-OBJS=main.o draw_delegate.o particle_system.o duckrace.o
+OBJS=main.o draw_delegate.o particle_system.o duckrace.o scene.o
 
 build : $(EXE)
 
 $(EXE) : $(OBJS)
 	$(CC) -o $(EXE) $(OBJS) $(LIBS)
 
-main.o : main.cpp draw_delegate.h particle_system.h duckrace.h
+main.o : main.cpp draw_delegate.h particle_system.h scene.h
 	$(CC) main.cpp $(CFLAGS) -o $@
 
 draw_delegate.o : draw_delegate.cpp draw_delegate.h
@@ -25,3 +25,6 @@ particle_system.o : particle_system.cpp particle_system.h
 
 duckrace.o : duckrace.cpp duckrace.h particle_system.h
 	$(CC) duckrace.cpp $(CFLAGS) -o $@
+
+scene.o : scene.cpp scene.h draw_delegate.h
+	$(CC) scene.cpp $(CFLAGS) -o $@

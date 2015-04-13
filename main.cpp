@@ -2,22 +2,21 @@
 
 #include "draw_delegate.h"
 #include "particle_system.h"
+#include "scene.h"
+
 #include "stdlib.h"
 #include "stdio.h"
 #include "string.h"
 
-#include "chrono" // milliseconds
-#include "thread" // this_thread::sleep_for
-#include <unistd.h> // usleep
 
 namespace {
 void error_callback(int error, const char* description) {
   fprintf(stderr, "%s\n", description);
 }
 int changeSetup = 0;
-bool limitFps = true;
-bool recalculateFps = false;
 bool implicitUpdate = false;
+
+Scene* scene_p;
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
   if (action == GLFW_PRESS) {
@@ -35,23 +34,16 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
         break;
 
       case 'A':
-        if (limitFps) limitFps = false;
-        else limitFps = true;
-        recalculateFps = true;
+        scene_p->ToggleLimitFps();
         break;
 
       case 'S':
         if (implicitUpdate) implicitUpdate = false;
         else implicitUpdate = true;
+        printf("Implicit: %d\n", (int) implicitUpdate);
         break;
     }
   }
-}
-
-int GridFloor(double x, int mpG) {
-  int ret = (int)(x/mpG);
-  if (x <0) ret -= 1;
-  return ret * mpG;
 }
 
 }; // namespace
@@ -70,7 +62,6 @@ int main(int argc, char **argv) {
   }
 
   glfwMakeContextCurrent(window);
-  glfwSetKeyCallback(window, key_callback);
   glfwSwapInterval(0);
   DrawDelegate::SetupOpenGL();
 
@@ -86,26 +77,18 @@ int main(int argc, char **argv) {
   m.SetupMouseSpring(5);
   //m.SetupTriangle();
 
-  // Frames per second set up
-  double timestart = glfwGetTime();
-  double curTime = timestart;
-  int frames = 0;
-  double timeAhead = 0;
-  double prevTime = timestart;
-
-  double secondsPerFrame = 1.0/60.0;
+  Scene scene;
+  scene.InitTime();
+  scene.cam_x = scene.cam_y = 0;
+  scene.zoom = 1;
+  scene_p = &scene;
 
   // Cursor spring set up
   double mouseX, mouseY;
   glfwGetCursorPos(window, &mouseX, &mouseY);
   m.SetMousePos(mouseX, mouseY);
 
-  // Camera setup
-  double x, y, zoom;
-
-  x = 0; y = 0; zoom = 1;
-  std::vector<float> gridpoints;
-  std::vector<float> gridcolors;
+  glfwSetKeyCallback(window, key_callback);
   while (!glfwWindowShouldClose(window)) {
 
     // Handle changing setup
@@ -129,88 +112,28 @@ int main(int argc, char **argv) {
     }
 
     // Update m
-    m.Update(secondsPerFrame, implicitUpdate);
+    m.Update(scene.GetTimestep(), implicitUpdate);
 
     // Set mouse spring pos
     glfwGetCursorPos(window, &mouseX, &mouseY);
-    m.SetMousePos(mouseX/zoom + x, mouseY/zoom + y);
+    m.SetMousePos(mouseX/scene.zoom + scene.cam_x, mouseY/scene.zoom + scene.cam_y);
 
     // Draw
     int pSize;
     int cSize;
-    m.GetCameraPosAndSize(&x, &y, &zoom);
-    float* points = m.GetPositions2d(&pSize, x, y, zoom);
+    m.GetCameraPosAndSize(&(scene.cam_x), &(scene.cam_y), &(scene.zoom));
+    float* points = m.GetPositions2d(&pSize, scene.cam_x, scene.cam_y, scene.zoom);
     float* colors = m.GetColors(&cSize);
 
-    // Make grid
-    int mpG = 5;
-
-    int x_flr = GridFloor(x, mpG);
-    int y_flr = GridFloor(y, mpG);
-    int xGrids = GridFloor(DDWIDTH/zoom + x, mpG) - GridFloor(x, mpG) + 1;
-    int yGrids = GridFloor(DDHEIGHT/zoom + y, mpG) - GridFloor(y, mpG) + 1;
-    gridpoints.resize((xGrids + yGrids) * 4);
-    gridcolors.resize((xGrids + yGrids) * 6);
-    for (int i = 0; i < xGrids; ++i) {
-      gridpoints[i*4] = (i*mpG + x_flr - x) * zoom;
-      gridpoints[i*4 + 1] = 0;
-      gridpoints[i*4 + 2] = (i*mpG + x_flr - x) * zoom;
-      gridpoints[i*4 + 3] = DDHEIGHT;
-      gridcolors[i*6] = 0;
-      gridcolors[i*6 + 1] = 1;
-      gridcolors[i*6 + 2] = 0;
-      gridcolors[i*6 + 3] = 0;
-      gridcolors[i*6 + 4] = 1;
-      gridcolors[i*6 + 5] = 0;
-    }
-    for (int i = xGrids; i < xGrids + yGrids; ++i) {
-      gridpoints[i*4] = 0;
-      gridpoints[i*4 + 1] = ((i - xGrids) *mpG + y_flr - y) * zoom;
-      gridpoints[i*4 + 2] = DDWIDTH;
-      gridpoints[i*4 + 3] = ((i - xGrids)* mpG + y_flr - y) * zoom;
-      gridcolors[i*6] = 0;
-      gridcolors[i*6 + 1] = 1;
-      gridcolors[i*6 + 2] = 0;
-      gridcolors[i*6 + 3] = 0;
-      gridcolors[i*6 + 4] = 1;
-      gridcolors[i*6 + 5] = 0;
-    }
     DrawDelegate::BeginFrame();
-    DrawDelegate::SetLineSize(1);
-    DrawDelegate::DrawLines(gridpoints.data(), (xGrids + yGrids) * 4, gridcolors.data(), (xGrids + yGrids) * 6);
+    scene.DrawGrid(5);
     DrawDelegate::SetLineSize(4);
     DrawDelegate::DrawLines(points, pSize, colors, cSize);
-
 
     glfwSwapBuffers(window);
     glfwPollEvents();
 
-
-    // Handle fps
-    frames++;
-    prevTime = curTime;
-    curTime = glfwGetTime();
-
-    if (limitFps) {
-      timeAhead -= curTime - prevTime;
-      timeAhead += 1.0/60.0;
-      if (timeAhead > 0) {
-#ifndef MACOSX
-        usleep((long)(timeAhead*1000000));
-#else
-        std::this_thread::sleep_for(std::chrono::duration<double>(timeAhead));
-#endif
-      }
-    }
-    if (curTime != timestart) {
-      secondsPerFrame = (curTime - timestart)/frames;
-    }
-    if (secondsPerFrame * frames > 4 || recalculateFps) {
-      recalculateFps = false;
-      timestart = curTime;
-      frames = 0;
-      printf("Frames per second: %f Springs: %d Implicit: %d\n x: %f y:%f zoom:%f\n", 1.0/secondsPerFrame, m.springs.size(), (int) implicitUpdate, x, y, zoom);
-    }
+    scene.EndOfFrame();
   }
 
   glfwDestroyWindow(window);
