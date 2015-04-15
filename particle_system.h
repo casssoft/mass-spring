@@ -46,6 +46,7 @@ class ParticleSystem {
   void ComputeForces();
   void ExplicitEuler(double timestep);
   void ImplicitEuler(double timestep);
+  void ImplicitEulerSolveForNewV(double timestep);
   std::vector<float> posTemp;
   std::vector<float> colorTemp;
   std::vector<double> phaseTemp;
