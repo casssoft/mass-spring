@@ -25,12 +25,20 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
         glfwSetWindowShouldClose(window, GL_TRUE);
         break;
 
-      case 'Q':
+      case '1':
         changeSetup = 1;
         break;
 
-      case 'W':
+      case '2':
         changeSetup = 2;
+        break;
+
+      case '3':
+        changeSetup = 3;
+        break;
+
+      case '4':
+        changeSetup = 4;
         break;
 
       case 'A':
@@ -67,20 +75,22 @@ int main(int argc, char **argv) {
 
   // Particle system setup
   ParticleSystem m;
-  if (argc == 4) {
+  int strainSize = 10;
+  if (argc >= 4) {
     m.SetSpringProperties(atof(argv[1]), atof(argv[2]));
     implicitUpdate = atoi(argv[3]);
+    if (argc == 5) {
+      strainSize = atoi(argv[4]);
+    }
   }
 
   //m.SetupSingleSpring();
   m.SetupBridge2();
-  m.SetupMouseSpring(5);
   //m.SetupTriangle();
+  //m.SetupMouseSpring(5);
 
   Scene scene;
   scene.InitTime();
-  scene.cam_x = scene.cam_y = 0;
-  scene.zoom = 1;
   scene_p = &scene;
 
   // Cursor spring set up
@@ -92,17 +102,25 @@ int main(int argc, char **argv) {
   while (!glfwWindowShouldClose(window)) {
 
     // Handle changing setup
-    if (changeSetup == 1) {
-      m.Reset();
-      m.SetupTriforce();
-      m.SetupMouseSpring(0);
-      changeSetup = 0;
-    } else if (changeSetup == 2) {
-      m.Reset();
-      m.SetupTriangle();
-      m.SetupMouseSpring(0);
-      changeSetup = 0;
+    switch (changeSetup) {
+      case 0:
+        break;
+      case 1:
+        m.SetupSingleSpring();
+        break;
+      case 2:
+        m.SetupBridge2();
+        break;
+      case 3:
+        m.SetupBridge2();
+        m.SetupMouseSpring(5);
+        break;
+      case 4:
+        m.SetupTriforce();
+        m.SetupMouseSpring(1);
+        break;
     }
+    changeSetup = 0;
 
     // Handle spring enable from mouse button
     if (glfwGetMouseButton(window, 0) == GLFW_PRESS) {
@@ -123,10 +141,10 @@ int main(int argc, char **argv) {
     int cSize;
     m.GetCameraPosAndSize(&(scene.cam_x), &(scene.cam_y), &(scene.zoom));
     float* points = m.GetPositions2d(&pSize, scene.cam_x, scene.cam_y, scene.zoom);
-    float* colors = m.GetColors(&cSize);
+    float* colors = m.GetColors(&cSize, strainSize);
 
     DrawDelegate::BeginFrame();
-    scene.DrawGrid(5);
+    scene.DrawGrid(1);
     DrawDelegate::SetLineSize(4);
     DrawDelegate::DrawLines(points, pSize, colors, cSize);
 

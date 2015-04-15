@@ -9,22 +9,25 @@ ParticleSystem::ParticleSystem() {
   stiffness = 100;
   dampness = 10;
   gravity = 9.8;
+  ground = false;
 }
 
 void ParticleSystem::Update(double timestep, bool implicit) {
   if (implicit) ImplicitEuler(timestep);
   else ExplicitEuler(timestep);
 
-  for (int i = 0; i < particles.size(); i++) {
-    if (particles[i].x[1] > DDHEIGHT-20) {
-      //particles[i].x[1] = DDHEIGHT - 20;
-      if (particles[i].v[1] > 0) {
-          //particles[i].v[1] = -.8 * particles[i].v[1];
-        /*if (particles[i].v[0] > 0) {
-          particles[i].v[0] -= 5000 * timestep;
-        } else {
-          particles[i].v[0] += 5000 * timestep;
-        }*/
+  if (ground) {
+    for (int i = 0; i < particles.size(); i++) {
+      if (particles[i].x[1] > DDHEIGHT-20) {
+        particles[i].x[1] = DDHEIGHT - 20;
+        if (particles[i].v[1] > 0) {
+            particles[i].v[1] = -.8 * particles[i].v[1];
+          /*if (particles[i].v[0] > 0) {
+            particles[i].v[0] -= 5000 * timestep;
+          } else {
+            particles[i].v[0] += 5000 * timestep;
+          }*/
+        }
       }
     }
   }
@@ -43,9 +46,9 @@ float* ParticleSystem::GetPositions2d(int* size, double x, double y, double zoom
     posTemp[i*4 + 3] = ((float)from->x[1] - y) * zoom;
   }
   posTemp[*size - 4] = 0;
-  posTemp[*size - 3] = (100 - y) * zoom;
+  posTemp[*size - 3] = (10 - y) * zoom;
   posTemp[*size - 2] = DDWIDTH;
-  posTemp[*size - 1] = (100 - y) * zoom;
+  posTemp[*size - 1] = (10 - y) * zoom;
   return posTemp.data();
 }
 
@@ -85,7 +88,8 @@ void ParticleSystem::GetCameraPosAndSize(double* x, double*y, double* zoom) {
     if (*y - fixed_points[i].x[1] > out)
       out = *y - fixed_points[i].x[1];
   }
-  *zoom = (DDWIDTH/2 - 50) / out;
+  *zoom = (DDWIDTH/2 - 100) / out;
+  if (*zoom > 1000) *zoom = 1000;
   if (*zoom < 0.001) *zoom = 0.001;
   *x -= (DDWIDTH/2) / (*zoom);
   *y -= (DDHEIGHT/2) / (*zoom);
@@ -107,7 +111,7 @@ static void LerpColors(double strain, float*color3) {
    }
 }
 
-float* ParticleSystem::GetColors(int* size) {
+float* ParticleSystem::GetColors(int* size, int strainSize) {
   *size = springs.size()*6 + 6;
   colorTemp.resize(*size);
   for (int i = 0; i < springs.size(); i++) {
@@ -117,7 +121,7 @@ float* ParticleSystem::GetColors(int* size) {
     float strain = ((to->x - from->x).norm() - springs[i].L) / springs[i].L;
     if (strain < 0) strain *= -1;
 
-    strain *= 10 + springs[i].k/1000;
+    strain *= strainSize;//10 + springs[i].k/1000;
     LerpColors(strain, &(colorTemp[i*6]));
     /*colorTemp[i*6] = strain - 1;
     colorTemp[i*6 + 1] = 0;
@@ -139,6 +143,7 @@ float* ParticleSystem::GetColors(int* size) {
 }
 
 void ParticleSystem::SetupSingleSpring() {
+  Reset();
   particles.emplace_back();
   particles.emplace_back();
   particles[0].x << 0.0, 0.0;
@@ -154,11 +159,13 @@ void ParticleSystem::SetupSingleSpring() {
   springs[0].k = stiffness;
   springs[0].L = .1;
   springs[0].c = dampness;
+  gravity = 0;
+  ground = false;
 
 }
 
-// Assumes this is the first Setup function called
 void ParticleSystem::SetupTriangle() {
+  Reset();
   particles.emplace_back();
   particles.emplace_back();
   particles.emplace_back();
@@ -175,10 +182,13 @@ void ParticleSystem::SetupTriangle() {
   AddSpring(0, 1);
   AddSpring(0, 2);
   AddSpring(1, 2);
+  gravity = 0;
+  ground = true;
 }
 
 // Assumes this is the first Setup function called
 void ParticleSystem::SetupTriforce() {
+  Reset();
   // 6 particles
   particles.emplace_back();
   particles.emplace_back();
@@ -186,23 +196,23 @@ void ParticleSystem::SetupTriforce() {
   particles.emplace_back();
   particles.emplace_back();
   particles.emplace_back();
-  particles[0].x << 200.0, 100.0;
+  particles[0].x << 20.0, 10.0;
   particles[0].v << 0.0, 0.0;
   particles[0].iMass = 1;
-  particles[1].x << 175.0, 125.0;
-  particles[1].v << 0.0, 10.0;
+  particles[1].x << 17.5, 12.5;
+  particles[1].v << 0.0, 0.0;
   particles[1].iMass = 1;
-  particles[2].x << 225.0, 125.0;
+  particles[2].x << 22.5, 12.5;
   particles[2].v << 0.0, 0.0;
   particles[2].iMass = 1;
 
-  particles[3].x << 150.0, 150.0;
+  particles[3].x << 15.0, 15.0;
   particles[3].v << 0.0, 0.0;
   particles[3].iMass = 1;
-  particles[4].x << 200.0, 150.0;
+  particles[4].x << 20.0, 15.0;
   particles[4].v << 0.0, 0.0;
   particles[4].iMass = 1;
-  particles[5].x << 250.0, 150.0;
+  particles[5].x << 25.0, 15.0;
   particles[5].v << 0.0, 0.0;
   particles[5].iMass = 1;
 
@@ -221,51 +231,57 @@ void ParticleSystem::SetupTriforce() {
   springs[0].to = 0;
   springs[0].from = 1;
   springs[0].k = stiffness;
-  springs[0].L = 50;
+  springs[0].L = 5;
   springs[0].c = dampness;
 
   springs[1].to = 0;
   springs[1].from = 2;
   springs[1].k = stiffness;
-  springs[1].L = 50;
+  springs[1].L = 5;
   springs[1].c = dampness;
 
   springs[2].to = 1;
   springs[2].from = 2;
   springs[2].k = stiffness;
-  springs[2].L = 50;
+  springs[2].L = 5;
   springs[2].c = dampness;
 
   springs[3].to = 1;
   springs[3].from = 3;
   springs[3].k = stiffness;
-  springs[3].L = 50;
+  springs[3].L = 5;
   springs[3].c = dampness;
   springs[4].to = 1;
   springs[4].from = 4;
   springs[4].k = stiffness;
-  springs[4].L = 50;
+  springs[4].L = 5;
   springs[4].c = dampness;
   springs[5].to = 2;
   springs[5].from = 4;
   springs[5].k = stiffness;
-  springs[5].L = 50;
+  springs[5].L = 5;
   springs[5].c = dampness;
   springs[6].to = 2;
   springs[6].from = 5;
   springs[6].k = stiffness;
-  springs[6].L = 50;
+  springs[6].L = 5;
   springs[6].c = dampness;
   springs[7].to = 3;
   springs[7].from = 4;
   springs[7].k = stiffness;
-  springs[7].L = 50;
+  springs[7].L = 5;
   springs[7].c = dampness;
   springs[8].to = 4;
   springs[8].from = 5;
   springs[8].k = stiffness;
-  springs[8].L = 50;
+  springs[8].L = 5;
   springs[8].c = dampness;
+
+  fixed_points.emplace_back();
+  fixed_points[0].x << 0, 0;
+  AddSpring(5, -1);
+  gravity = 9.8;
+  ground = false;
 }
 
 void ParticleSystem::SetupBall(double x, double y) {
@@ -276,11 +292,13 @@ void ParticleSystem::SetupMouseSpring(int to) {
   if (mouseP == -1) {
     fixed_points.emplace_back();
     mouseP = fixed_points.size() - 1;
-    fixed_points[mouseP].x << 0, 0;
+    fixed_points[mouseP].x << 0.5, 0.5;
     fixed_points[mouseP].v << 0, 0;
     fixed_points[mouseP].iMass = 1;
+    printf("MouseP %d, neg mouseP %d\n", mouseP, -1 * mouseP - 1);
   }
   springs.emplace_back();
+  //AddSpring(to, -1 * mouseP - 1);
   mouseSprings.push_back(springs.size() - 1);
   Spring* tempS = &(springs[springs.size() - 1]);
   tempS->to = to;
@@ -311,22 +329,23 @@ void ParticleSystem::SetMousePos(double x, double y) {
 }
 
 void ParticleSystem::SetupBridge2() {
+  Reset();
   fixed_points.emplace_back();
   fixed_points.emplace_back();
 
   int bridgeL = 10;
-  fixed_points[0].x << -6, 0;
-  fixed_points[1].x << bridgeL*6, 0;
+  fixed_points[0].x << -4, 0;
+  fixed_points[1].x << bridgeL*4, 0;
   for (int i = 0; i < bridgeL; ++i) {
     particles.emplace_back();
-    particles[i].x << i* 6, 0;
+    particles[i].x << i* 4, 0;
     particles[i].v << 0, 0;
     particles[i].iMass = 1;
   }
   int l2start = bridgeL;
   for (int i = bridgeL; i < bridgeL*2 +1; i++) {
     particles.emplace_back();
-    particles[i].x << (i - bridgeL)* 6 - 3, -6;
+    particles[i].x << (i - bridgeL)* 4 - 2, -4;
     particles[i].v << 0, 0;
     particles[i].iMass = 1;
   }
@@ -346,6 +365,8 @@ void ParticleSystem::SetupBridge2() {
     AddSpring(l2start + i, i);
     AddSpring(i, l2start + i + 1);
   }
+  gravity = 9.8;
+  ground = false;
   /*
   for (int i = 0; i < bridgeL - 1; i++) {
     AddSpring(i*2 + ((i+1)%2), (i+1)*2 + (i%2));
@@ -357,6 +378,7 @@ void ParticleSystem::SetupBridge2() {
   }*/
 }
 void ParticleSystem::SetupBridge() {
+  Reset();
   fixed_points.emplace_back();
   fixed_points.emplace_back();
   fixed_points.emplace_back();
@@ -440,6 +462,8 @@ void ParticleSystem::SetupBridge() {
     springs[curS].k = stiffness;
     springs[curS].c = dampness;
   }
+  gravity = 9.8;
+  ground = false;
 }
 
 void ParticleSystem::Reset() {
@@ -466,8 +490,14 @@ void ParticleSystem::ComputeForces() {
     Particle *to, *from;
     GetSpringP(i, to, from);
 
+    Eigen::Vector2d springdir;
     double length = (to->x - from->x).norm();
-    Eigen::Vector2d springdir = (to->x - from->x) / length;
+    if (length != 0) {
+      springdir = (to->x - from->x) / length;
+    } else {
+      springdir << 1, 0;
+      length = Eigen::NumTraits<double>::epsilon();
+    }
     Eigen::Vector2d force =  (length - springs[i].L) * springs[i].k * springdir;
     // Damping
     force += springs[i].c * springdir * ((to->v - from->v).dot(springdir));
@@ -523,6 +553,10 @@ void ParticleSystem::ImplicitEuler(double timestep) {
       from = &(particles[springs[i].from]);
     Eigen::Vector2d springdir = from->x - to->x;
     double length = springdir.norm();
+    if (length == 0)  {
+      //printf("zero %d\n", i);
+      continue;
+    }
     // Jacobian for Hookean spring force
     //temp = ( (springdir * springdir.transpose())/(springdir.transpose() * springdir) + ( Eigen::MatrixXd::Identity(3,3) - (springdir * springdir.transpose())/(springdir.transpose() * springdir)) * ( 1- springs[i].L/length)) * springs[i].k;
     temp = springs[i].k * ( (1 - springs[i].L/length) * (Eigen::MatrixXd::Identity(2,2) - ((springdir/length) * (springdir/length).transpose()))

@@ -11,7 +11,7 @@
 
 Scene::Scene() {
   cam_x = cam_y = 0;
-  zoom = 0;
+  zoom = 1;
   limitFps = true;
 }
 
@@ -81,6 +81,15 @@ void Scene::DrawGrid(int gridSize) {
   int y_flr = GridFloor(cam_y, gridSize);
   int xGrids = GridFloor(DDWIDTH/zoom + cam_x, gridSize) - GridFloor(cam_x, gridSize) + 1;
   int yGrids = GridFloor(DDHEIGHT/zoom + cam_y, gridSize) - GridFloor(cam_y, gridSize) + 1;
+  if (xGrids > DDWIDTH || yGrids > DDHEIGHT) {
+    return;
+    // Cover the screen with grid
+    xGrids = DDWIDTH;
+    yGrids = DDHEIGHT;
+    gridSize = 1/zoom;
+    x_flr = cam_x;
+    y_flr = cam_y;
+  }
   gridpoints.resize((xGrids + yGrids) * 4);
   gridcolors.resize((xGrids + yGrids) * 6);
   for (int i = 0; i < xGrids; ++i) {
