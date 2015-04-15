@@ -13,7 +13,7 @@ ParticleSystem::ParticleSystem() {
 }
 
 void ParticleSystem::Update(double timestep, bool implicit) {
-  if (implicit) ImplicitEuler(timestep);
+  if (implicit) ImplicitEulerSolveForNewV(timestep);
   else ExplicitEuler(timestep);
 
   if (ground) {
@@ -667,7 +667,7 @@ void ParticleSystem::ImplicitEulerSolveForNewV(double timestep) {
     A.coeffRef(i*2,i*2) = 1/particles[i].iMass;
     A.coeffRef(i*2+1,i*2+1) = 1/particles[i].iMass;
   }
-  b = A * v_0 + timestep * f_0;
+  b = A * v_0 + timestep * f_0 - timestep * dfdv * v_0;
   A = A - timestep * timestep * dfdx - timestep *dfdv;
   Eigen::VectorXd vnew(vSize);
   Eigen::ConjugateGradient<Eigen::MatrixXd > cg;
