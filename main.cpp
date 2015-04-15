@@ -15,7 +15,7 @@ void error_callback(int error, const char* description) {
 }
 int changeSetup = 0;
 bool implicitUpdate = false;
-
+int bridgeL = 10;
 Scene* scene_p;
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
@@ -49,6 +49,14 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
         if (implicitUpdate) implicitUpdate = false;
         else implicitUpdate = true;
         printf("Implicit: %d\n", (int) implicitUpdate);
+        break;
+
+      case 'Q':
+        bridgeL++;
+        break;
+
+      case 'W':
+        bridgeL--;
         break;
     }
   }
@@ -85,7 +93,7 @@ int main(int argc, char **argv) {
   }
 
   //m.SetupSingleSpring();
-  m.SetupBridge2();
+  m.SetupBridge2(bridgeL);
   //m.SetupTriangle();
   //m.SetupMouseSpring(5);
 
@@ -109,11 +117,11 @@ int main(int argc, char **argv) {
         m.SetupSingleSpring();
         break;
       case 2:
-        m.SetupBridge2();
+        m.SetupBridge2(bridgeL);
         break;
       case 3:
-        m.SetupBridge2();
-        m.SetupMouseSpring(5);
+        m.SetupBridge2(bridgeL);
+        m.SetupMouseSpring(bridgeL/2);
         break;
       case 4:
         m.SetupTriforce();

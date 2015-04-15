@@ -35,7 +35,7 @@ class ParticleSystem {
   void SetMouseSpring(bool enabled);
   void SetMousePos(double x, double y);
   void SetupBridge();
-  void SetupBridge2();
+  void SetupBridge2(int bridgeL);
   void Reset();
   void SetSpringProperties(double k, double c);
 

@@ -295,7 +295,6 @@ void ParticleSystem::SetupMouseSpring(int to) {
     fixed_points[mouseP].x << 0.5, 0.5;
     fixed_points[mouseP].v << 0, 0;
     fixed_points[mouseP].iMass = 1;
-    printf("MouseP %d, neg mouseP %d\n", mouseP, -1 * mouseP - 1);
   }
   springs.emplace_back();
   //AddSpring(to, -1 * mouseP - 1);
@@ -328,12 +327,12 @@ void ParticleSystem::SetMousePos(double x, double y) {
    }
 }
 
-void ParticleSystem::SetupBridge2() {
+void ParticleSystem::SetupBridge2(int bridgeL) {
   Reset();
   fixed_points.emplace_back();
   fixed_points.emplace_back();
 
-  int bridgeL = 10;
+  //int bridgeL = 10;
   fixed_points[0].x << -4, 0;
   fixed_points[1].x << bridgeL*4, 0;
   for (int i = 0; i < bridgeL; ++i) {
