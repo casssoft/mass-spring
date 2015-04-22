@@ -129,7 +129,7 @@ int main(int argc, char **argv) {
         m.SetupBridge(bridgeL);
         break;
       case 3:
-        m.SetupBridge(bridgeL);
+        m.SetupBendingBar();
         break;
       case 4:
         m.SetupTriforce();

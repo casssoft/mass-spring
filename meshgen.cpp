@@ -1,8 +1,10 @@
 #include "meshgen.h"
 #define TETLIBRARY
 #include "tetgen.h"
+#include "Eigen/Sparse"
+#include <vector>
 
-void MeshGen::GenerateBar(double*& points, int& psize, int*& edges, int&esize) {
+void MeshGen::GenerateBar(double*& points, int& psize, std::vector<int>& edges) {
   tetgenio in, out;
   tetgenio::facet *f;
   tetgenio::polygon *p;
@@ -133,10 +135,40 @@ void MeshGen::GenerateBar(double*& points, int& psize, int*& edges, int&esize) {
   //   do quality mesh generation (q) with a specified quality bound
   //   (1.414), and apply a maximum volume constraint (a0.1).
 
-  tetrahedralize("pq1.414a0.1", &in, &out);
+  tetrahedralize("pq1.414a.8", &in, &out);
 
-  points = out.pointlist;
+  points = new double[out.numberofpoints*3];
+  for (int i = 0; i < out.numberofpoints*3;++i) {
+    if (i%3 == 2) {
+      points[i] = -1* out.pointlist[i];
+    } else {
+      points[i] = out.pointlist[i];
+    }
+  }
   psize = out.numberofpoints;
-  edges = out.edgelist;
-  esize = out.numberofedges;
+  Eigen::SparseMatrix<int> springs(psize, psize);
+
+  std::vector<Eigen::Triplet<int>> springtriplets;
+  printf("Number of corners? %d\n", out.numberofcorners);
+  int teta,tetb,tetc,tetd;
+  for (int i = 0; i < out.numberoftetrahedra; ++i) {
+    teta = out.tetrahedronlist[i*4]-1;
+    tetb = out.tetrahedronlist[i*4+1]-1;
+    tetc = out.tetrahedronlist[i*4+2]-1;
+    tetd = out.tetrahedronlist[i*4+3]-1;
+    springtriplets.push_back(Eigen::Triplet<int>(teta, tetb, 1));
+    springtriplets.push_back(Eigen::Triplet<int>(teta, tetc, 1));
+    springtriplets.push_back(Eigen::Triplet<int>(teta, tetd, 1));
+    springtriplets.push_back(Eigen::Triplet<int>(tetb, tetc, 1));
+    springtriplets.push_back(Eigen::Triplet<int>(tetb, tetd, 1));
+    springtriplets.push_back(Eigen::Triplet<int>(tetc, tetd, 1));
+  }
+  springs.setFromTriplets(springtriplets.begin(), springtriplets.end());
+  for (int k=0; k<springs.outerSize(); ++k) {
+    for (Eigen::SparseMatrix<int>::InnerIterator it(springs,k); it; ++it) {
+      edges.push_back(it.row());
+      edges.push_back(it.col());
+    }
+  }
+  fprintf(stderr, "We are here\n");
 }

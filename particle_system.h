@@ -30,8 +30,8 @@ class ParticleSystem {
   void SetupSingleSpring();
   void SetupTriangle();
   void SetupTriforce();
-  void SetupMouseSpring(int to);
   void SetupBridge(int bridgeL);
+  void SetupBendingBar();
   void Reset();
   void SetSpringProperties(double k, double c);
 
@@ -39,9 +39,11 @@ class ParticleSystem {
   std::vector<Particle> particles;
   std::vector<Particle> fixed_points;
  private:
+  void MakeFixedPoint(int i, std::vector<int>& edges);
   void ComputeForces();
   void ExplicitEuler(double timestep);
   void ImplicitEuler(double timestep);
+  void ImplicitEulerSparse(double timestep);
   void ImplicitEulerSolveForNewV(double timestep);
   std::vector<float> posTemp;
   std::vector<float> colorTemp;

@@ -1,5 +1,6 @@
 #include "particle_system.h"
 #include "draw_delegate.h"
+#include "meshgen.h"
 #include "Eigen/Sparse"
 #include "Eigen/IterativeLinearSolvers"
 
@@ -11,8 +12,8 @@ ParticleSystem::ParticleSystem() {
 }
 
 void ParticleSystem::Update(double timestep, bool implicit) {
-  if (implicit) ImplicitEuler(timestep);
-  else ExplicitEuler(timestep);
+  if (implicit)  ImplicitEuler(timestep);
+  else ImplicitEulerSparse(timestep);
 
   if (ground) {
     for (int i = 0; i < particles.size(); i++) {
@@ -301,6 +302,53 @@ void ParticleSystem::SetupBridge(int bridgeL) {
   }*/
 }
 
+void ParticleSystem::SetupBendingBar() {
+  Reset();
+  int psize;
+  double* points;
+  std::vector<int> edges;
+  MeshGen::GenerateBar(points, psize, edges);
+
+
+  for (int i = 0; i < psize; ++i) {
+    particles.emplace_back();
+    particles[i].x << points[i*3], points[i*3 + 1], points[i*3 + 2];
+    particles[i].v << 0, 0, 0;
+  }
+  for (int i = 0; i < psize; ++i) {
+    if (particles[i].x[2] == 0) {
+      printf("fixed_point!\n");
+      MakeFixedPoint(i, edges);
+      psize -= 1;
+      i--;
+    }
+  }
+
+  for (int i = 0; i < (edges.size()/2); ++i) {
+    AddSpring(edges[i*2], edges[i*2 + 1]);
+  }
+  for (int i = 0; i < particles.size(); ++i) {
+    CalculateParticleMass(i, 200.0/edges.size());
+  }
+  gravity = 9.8;
+  printf("Psize: %d, esize %d\n",psize, edges.size());
+  ground = false;
+  delete[] points;
+}
+
+void ParticleSystem::MakeFixedPoint(int p, std::vector<int>& edges) {
+  fixed_points.emplace_back();
+  fixed_points[fixed_points.size() - 1].x = particles[p].x;
+  for (int i = 0; i < edges.size(); ++i) {
+    if (edges[i] == p) {
+      edges[i] = -1*fixed_points.size();
+    } else if (edges[i] > p) {
+      edges[i] -= 1;
+    }
+  }
+  particles.erase(particles.begin() + p);
+}
+
 void ParticleSystem::CalculateParticleMass(int i, float springMass) {
   float mass = 0;
   for (int j = 0; j < springs.size(); ++j) {
@@ -376,6 +424,125 @@ void ParticleSystem::ExplicitEuler(double timestep) {
     particles[i].x += particles[i].v * timestep;
   }
 }
+namespace {
+  void PushbackMatrix3d(std::vector<Eigen::Triplet<double>>& tlist, Eigen::Matrix3d& temp, int startcol, int startrow, int mul) {
+    for (int i = 0; i < 3; ++i) {
+      for (int j = 0; j < 3; ++j) {
+        tlist.push_back(Eigen::Triplet<double>(startcol + i, startrow + j, mul * temp(i, j)));
+      }
+    }
+  }
+
+Eigen::SparseMatrix<double> iesA;
+Eigen::VectorXd iesb;
+
+Eigen::SparseMatrix<double> iesdfdx;
+Eigen::SparseMatrix<double> iesdfdv;
+
+std::vector<Eigen::Triplet<double>> iesdfdxtriplet;
+std::vector<Eigen::Triplet<double>> iesdfdvtriplet;
+
+}
+
+void ParticleSystem::ImplicitEulerSparse(double timestep) {
+  int vSize = 3 * particles.size();
+  iesA.resize(vSize, vSize);
+  iesb.resize(vSize);
+  iesdfdx.resize(vSize, vSize);
+  iesdfdv.resize(vSize, vSize);
+
+  Eigen::Matrix3d temp;
+  Eigen::Matrix3d tempdv;
+
+  iesdfdxtriplet.clear();
+  iesdfdvtriplet.clear();
+
+  for (int i = 0; i < springs.size(); i++) {
+    Particle *to, *from;
+    if (springs[i].to < 0)
+      to = &(fixed_points[springs[i].to * -1 - 1]);
+    else
+      to = &(particles[springs[i].to]);
+    if (springs[i].from < 0)
+      from = &(fixed_points[springs[i].from * -1 - 1]);
+    else
+      from = &(particles[springs[i].from]);
+    Eigen::Vector3d springdir = from->x - to->x;
+    double length = springdir.norm();
+    if (length == 0)  {
+      //printf("zero %d\n", i);
+      continue;
+    }
+    // Jacobian for Hookean spring force
+    //temp = ( (springdir * springdir.transpose())/(springdir.transpose() * springdir) + ( Eigen::MatrixXd::Identity(3,3) - (springdir * springdir.transpose())/(springdir.transpose() * springdir)) * ( 1- springs[i].L/length)) * springs[i].k;
+    temp = springs[i].k * ( (1 - springs[i].L/length) * (Eigen::MatrixXd::Identity(3,3) - ((springdir/length) * (springdir/length).transpose()))
+           + ((springdir/length) * (springdir/length).transpose()));
+
+    tempdv = springs[i].c * ((springdir/length) * (springdir/length).transpose());
+
+    if (springs[i].to >= 0 && springs[i].from >= 0) {
+      PushbackMatrix3d(iesdfdxtriplet, temp, springs[i].to * 3, springs[i].from * 3, 1);
+      //dfdx.block<3,3>(springs[i].to * 3, springs[i].from * 3) += temp;
+      PushbackMatrix3d(iesdfdxtriplet, temp, springs[i].from * 3, springs[i].to * 3, 1);
+      //dfdx.block<3,3>(springs[i].from * 3, springs[i].to * 3) += temp;
+
+      PushbackMatrix3d(iesdfdvtriplet, tempdv, springs[i].to * 3, springs[i].from * 3, 1);
+      //dfdv.block<3,3>(springs[i].to * 3, springs[i].from * 3) += tempdv;
+      PushbackMatrix3d(iesdfdvtriplet, tempdv, springs[i].from * 3, springs[i].to * 3, 1);
+      //dfdv.block<3,3>(springs[i].from * 3, springs[i].to * 3) += tempdv;
+    }
+    if (springs[i].to >= 0) {
+      PushbackMatrix3d(iesdfdxtriplet, temp, springs[i].to * 3, springs[i].to * 3, -1);
+      //dfdx.block<3,3>(springs[i].to * 3, springs[i].to * 3) -= temp;
+      PushbackMatrix3d(iesdfdvtriplet, tempdv, springs[i].to * 3, springs[i].to * 3, -1);
+      //dfdv.block<3,3>(springs[i].to * 3, springs[i].to * 3) -= tempdv;
+    }
+    if (springs[i].from >= 0) {
+      PushbackMatrix3d(iesdfdxtriplet, temp, springs[i].from * 3, springs[i].from * 3, -1);
+      //dfdx.block<3,3>(springs[i].from * 3, springs[i].from * 3) -= temp;
+      PushbackMatrix3d(iesdfdvtriplet, tempdv, springs[i].from * 3, springs[i].from * 3, -1);
+      //dfdv.block<3,3>(springs[i].from * 3, springs[i].from * 3) -= tempdv;
+    }
+  }
+  iesdfdx.setFromTriplets(iesdfdxtriplet.begin(), iesdfdxtriplet.end());
+  iesdfdv.setFromTriplets(iesdfdvtriplet.begin(), iesdfdvtriplet.end());
+
+  ComputeForces();
+  Eigen::VectorXd v_0(vSize);
+  Eigen::VectorXd f_0(vSize);
+
+
+  std::vector<Eigen::Triplet<double>> masstriplet;
+
+  for (int i = 0; i < particles.size(); i++) {
+    v_0[i * 3] = particles[i].v[0];
+    v_0[i * 3 + 1] = particles[i].v[1];
+    v_0[i * 3 + 2] = particles[i].v[2];
+    f_0[i * 3] = particles[i].f[0];
+    f_0[i * 3 + 1] = particles[i].f[1];
+    f_0[i * 3 + 2] = particles[i].f[2];
+    masstriplet.push_back(Eigen::Triplet<double>(i*3,i*3,1/particles[i].iMass));
+    masstriplet.push_back(Eigen::Triplet<double>(i*3+1,i*3+1,1/particles[i].iMass));
+    masstriplet.push_back(Eigen::Triplet<double>(i*3+2,i*3+2,1/particles[i].iMass));
+    //A.coeffRef(i*3,i*3) = 1/particles[i].iMass;
+    //A.coeffRef(i*3+1,i*3+1) = 1/particles[i].iMass;
+    //A.coeffRef(i*3+2,i*3+2) = 1/particles[i].iMass;
+  }
+  iesA.setFromTriplets(masstriplet.begin(), masstriplet.end());
+  iesb = timestep * (f_0 + timestep * (iesdfdx * v_0));
+  iesA = iesA - (timestep * iesdfdv + timestep * timestep * iesdfdx);
+  Eigen::VectorXd vdiff(vSize);
+  Eigen::ConjugateGradient<Eigen::SparseMatrix<double> > cg;
+  cg.compute(iesA);
+  vdiff = cg.solve(iesb);
+  for (int i = 0; i < particles.size(); i++) {
+    particles[i].v[0] += vdiff[i * 3];
+    particles[i].v[1] += vdiff[i * 3 + 1];
+    particles[i].v[2] += vdiff[i * 3 + 2];
+
+    particles[i].x += timestep * particles[i].v;
+  }
+}
 
 void ParticleSystem::ImplicitEuler(double timestep) {
   int vSize = 3 * particles.size();
@@ -386,8 +553,10 @@ void ParticleSystem::ImplicitEuler(double timestep) {
   Eigen::MatrixXd dfdv(vSize, vSize);
   dfdx.setZero();
   dfdv.setZero();
+
   Eigen::Matrix3d temp;
   Eigen::Matrix3d tempdv;
+
   for (int i = 0; i < springs.size(); i++) {
     Particle *to, *from;
     if (springs[i].to < 0)
