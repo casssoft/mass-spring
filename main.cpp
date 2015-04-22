@@ -16,6 +16,7 @@ void error_callback(int error, const char* description) {
 int changeSetup = 0;
 bool implicitUpdate = false;
 int bridgeL = 10;
+float xpos = 0, ypos = 0, zpos = -20;
 Scene* scene_p;
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
@@ -58,6 +59,18 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
       case 'W':
         bridgeL--;
         break;
+      case 'I':
+        zpos += 1;
+        break;
+      case 'K':
+        zpos -= 1;
+        break;
+      case 'J':
+        xpos -= 1;
+        break;
+      case 'L':
+        xpos += 1;
+        break;
     }
   }
 }
@@ -93,7 +106,7 @@ int main(int argc, char **argv) {
   }
 
   //m.SetupSingleSpring();
-  m.SetupBridge2(bridgeL);
+  m.SetupBridge(bridgeL);
   //m.SetupTriangle();
   //m.SetupMouseSpring(5);
 
@@ -101,10 +114,6 @@ int main(int argc, char **argv) {
   scene.InitTime();
   scene_p = &scene;
 
-  // Cursor spring set up
-  double mouseX, mouseY;
-  glfwGetCursorPos(window, &mouseX, &mouseY);
-  m.SetMousePos(mouseX, mouseY);
 
   glfwSetKeyCallback(window, key_callback);
   while (!glfwWindowShouldClose(window)) {
@@ -117,44 +126,22 @@ int main(int argc, char **argv) {
         m.SetupSingleSpring();
         break;
       case 2:
-        m.SetupBridge2(bridgeL);
+        m.SetupBridge(bridgeL);
         break;
       case 3:
-        m.SetupBridge2(bridgeL);
-        m.SetupMouseSpring(bridgeL/2);
+        m.SetupBridge(bridgeL);
         break;
       case 4:
         m.SetupTriforce();
-        m.SetupMouseSpring(1);
         break;
     }
     changeSetup = 0;
 
-    // Handle spring enable from mouse button
-    if (glfwGetMouseButton(window, 0) == GLFW_PRESS) {
-      m.SetMouseSpring(false);
-    } else {
-      m.SetMouseSpring(true);
-    }
-
     // Update m
     m.Update(scene.GetTimestep(), implicitUpdate);
 
-    // Set mouse spring pos
-    glfwGetCursorPos(window, &mouseX, &mouseY);
-    m.SetMousePos(mouseX/scene.zoom + scene.cam_x, mouseY/scene.zoom + scene.cam_y);
-
     // Draw
-    int pSize;
-    int cSize;
-    m.GetCameraPosAndSize(&(scene.cam_x), &(scene.cam_y), &(scene.zoom));
-    float* points = m.GetPositions2d(&pSize, scene.cam_x, scene.cam_y, scene.zoom);
-    float* colors = m.GetColors(&cSize, strainSize);
-
-    DrawDelegate::BeginFrame();
-    scene.DrawGrid(1);
-    DrawDelegate::SetLineSize(4);
-    DrawDelegate::DrawLines(points, pSize, colors, cSize);
+    scene.DrawScene(&m, strainSize, xpos, ypos, zpos);
 
     glfwSwapBuffers(window);
     glfwPollEvents();

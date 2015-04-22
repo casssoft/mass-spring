@@ -3,10 +3,10 @@
 
 #include <vector>
 
+class ParticleSystem;
 class Scene {
  public:
   Scene();
-  double cam_x, cam_y, zoom;
   void InitTime();
   void EndOfFrame();
   void RecalculateFps();
@@ -14,6 +14,7 @@ class Scene {
   void SetLimitFps(bool enable);
   void ToggleLimitFps();
   double GetFps();
+  void DrawScene(ParticleSystem* m, int strainSize, float xpos, float ypos, float zpos);
   void DrawGrid(int gridSize);
  private:
   bool limitFps;

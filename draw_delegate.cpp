@@ -71,13 +71,13 @@ PFNGLUNIFORM3FPROC glUniform3f = NULL;
 #define STARTING_SHEETS 16
 char * vertexSource =
 "#version 120\n"
-"attribute vec2 position;\n"
+"attribute vec3 position;\n"
 "attribute vec3 colorQ;\n"
 "uniform mat4 viewMatrix;\n"
 "varying vec3 fragColor;\n"
 "void main() {\n"
 "  fragColor = colorQ;\n"
-"  gl_Position = viewMatrix * (vec4(0.375,0.375,0,0) + vec4(position,1.0,1.0));\n"
+"  gl_Position = viewMatrix * (vec4(position,1.0));\n"
 "}\n";
 char * fragmentSource =
 "#version 120\n"
@@ -92,20 +92,6 @@ GLuint colorAttribute;
 GLuint viewMatrixUniform;
 GLuint pointVBO;
 GLuint colorVBO;
-int height = DDHEIGHT;
-int width = DDWIDTH;
-float right = width;
-float left = 0;
-float top = 0;
-float bottom = height;
-float close = .01;
-float away = 100;
-float viewmatrix[] = {
-  2/(right - left), 0, 0, -1 * (right+left)/(right-left),
-  0, 2/(top-bottom), 0, -1 * (top+bottom)/(top-bottom),
-  0, 0, -2/(away-close), (away+close)/(away-close),
-  0, 0, 0, 1
-};
 
 bool DrawDelegate::SetupOpenGL() {
 #ifndef MACOSX
@@ -146,8 +132,8 @@ bool DrawDelegate::SetupOpenGL() {
   //glEnable(GL_TEXTURE_2D);
   //glEnable(GL_ALPHA_TEST);
 	//glAlphaFunc(GL_GREATER,0.1f);
-  glDisable(GL_DEPTH_TEST);
-  glDisable(GL_CULL_FACE);
+  glEnable(GL_DEPTH_TEST);
+  //glDisable(GL_CULL_FACE);
 
   /* Set up shaders */
   GLuint vertexShader, fragmentShader;
@@ -213,7 +199,7 @@ bool DrawDelegate::SetupOpenGL() {
 
   glGenBuffers(1, &pointVBO);
   glBindBuffer(GL_ARRAY_BUFFER, pointVBO);
-  glBufferData(GL_ARRAY_BUFFER, sizeof(float)*900, NULL, GL_DYNAMIC_DRAW);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(float)*1000, NULL, GL_DYNAMIC_DRAW);
   glBindBuffer(GL_ARRAY_BUFFER, 0);
 
   glClearColor(1,1,1,1);
@@ -225,19 +211,22 @@ void DrawDelegate::SetLineSize(float size) {
   glLineWidth(size);
 }
 
+void DrawDelegate::SetViewMatrix(float* viewmatrix) {
+  glUniformMatrix4fv(viewMatrixUniform, 1, false, viewmatrix);
+}
 void DrawDelegate::BeginFrame() {
   glClear(GL_COLOR_BUFFER_BIT);
+  glClear(GL_DEPTH_BUFFER_BIT);
   glColor4f(1.0,1.0,1.0,1.0);
   glBindBuffer(GL_ARRAY_BUFFER, colorVBO);
   glVertexAttribPointer(colorAttribute, 3, GL_FLOAT, false, 0, 0);
   glBindBuffer(GL_ARRAY_BUFFER, pointVBO);
-  glVertexAttribPointer(positionAttribute, 2, GL_FLOAT, false, 0, 0);
-  glUniformMatrix4fv(viewMatrixUniform, 1, true, viewmatrix);
+  glVertexAttribPointer(positionAttribute, 3, GL_FLOAT, false, 0, 0);
 }
 
 namespace {
   int DDbufferSize = 1000;
-  int DDcolorbufferSize = 900;
+  int DDcolorbufferSize = 1000;
 };
 void DrawDelegate::DrawLines(float* pos, int npos, float* color, int ncolor) {
   while(npos > DDbufferSize)

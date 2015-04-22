@@ -5,9 +5,9 @@
 #include <vector>
 class Particle {
  public:
-  Eigen::Vector2d x;
-  Eigen::Vector2d v;
-  Eigen::Vector2d f;
+  Eigen::Vector3d x;
+  Eigen::Vector3d v;
+  Eigen::Vector3d f;
   double iMass;
 };
 
@@ -24,18 +24,14 @@ class ParticleSystem {
  public:
   ParticleSystem();
   void Update(double timestep, bool implicit);
-  float* GetPositions2d(int* size, double x, double y, double zoom);
-  void GetCameraPosAndSize(double* x, double* y, double* zoom);
+  float* GetPositions3d(int* size);
+  void GetCameraPosAndSize(double* x, double* y, double*z);
   float* GetColors(int* size, int strainSize);
   void SetupSingleSpring();
   void SetupTriangle();
   void SetupTriforce();
-  void SetupBall(double x, double y);
   void SetupMouseSpring(int to);
-  void SetMouseSpring(bool enabled);
-  void SetMousePos(double x, double y);
-  void SetupBridge();
-  void SetupBridge2(int bridgeL);
+  void SetupBridge(int bridgeL);
   void Reset();
   void SetSpringProperties(double k, double c);
 
@@ -50,14 +46,13 @@ class ParticleSystem {
   std::vector<float> posTemp;
   std::vector<float> colorTemp;
   std::vector<double> phaseTemp;
-  int mouseP;
-  std::vector<int> mouseSprings;
   double stiffness;
   double dampness;
   double gravity;
   bool ground;
   void AddSpring(int to, int from);
   void GetSpringP(int i, Particle*& to, Particle*& from);
+  void CalculateParticleMass(int i, float springMass);
 };
 #endif // PARTICLE_SYSTEM_H__
 

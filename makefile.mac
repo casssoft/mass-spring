@@ -1,14 +1,13 @@
 CC=g++
 
-#cc simple.c libglfw3.a -framework Cocoa -framework OpenGL
 CFLAGS= -c -DMACOSX -I../ -Wno-write-strings -std=c++11
 
-LIBS= libglfw3.a -framework Cocoa -framework OpenGL -framework IOKit -framework CoreVideo -static-libgcc -static-libstdc++
+LIBS= libglfw3.a libtet.a -framework Cocoa -framework OpenGL -framework IOKit -framework CoreVideo -static-libgcc -static-libstdc++
 
 EXE=spring
 
 
-OBJS=main.o draw_delegate.o particle_system.o duckrace.o scene.o
+OBJS=main.o draw_delegate.o particle_system.o meshgen.o scene.o
 
 
 build : $(EXE)
@@ -27,8 +26,8 @@ draw_delegate.o : draw_delegate.cpp draw_delegate.h
 particle_system.o : particle_system.cpp particle_system.h
 	$(CC) particle_system.cpp $(CFLAGS) -o $@
 
-duckrace.o : duckrace.cpp duckrace.h particle_system.h
-	$(CC) duckrace.cpp $(CFLAGS) -o $@
+meshgen.o : meshgen.cpp meshgen.h
+	$(CC) meshgen.cpp $(CFLAGS) -o $@
 
 scene.o : scene.cpp scene.h draw_delegate.h
 	$(CC) scene.cpp $(CFLAGS) -o $@
