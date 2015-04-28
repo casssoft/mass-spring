@@ -104,7 +104,7 @@ void PerspectiveMatrix(float fovY, float aspect, float near, float far, Eigen::M
 
 #define PI 3.14159265
 }
-void Scene::DrawScene(ParticleSystem* m, int strainSize, float xpos, float ypos, float zpos) {
+void Scene::DrawScene(ParticleSystem* m, int strainSize, float xpos, float ypos, float zpos, bool drawPoints) {
   int pSize;
   int cSize;
   float* points = m->GetPositions3d(&pSize);
@@ -112,21 +112,27 @@ void Scene::DrawScene(ParticleSystem* m, int strainSize, float xpos, float ypos,
 
   Eigen::Matrix4f rotationMatrix;
   Eigen::Matrix4f projectionMatrix;
+  rotationMatrix.setZero();
   projectionMatrix.setZero();
   Eigen::Vector3f pos, target, up;
   pos << xpos, ypos, zpos;
-  target << points[0], points[1], points[2];
+  target << 0,0,0;//points[0], points[1], points[2];
   up << 0, -1, 0;
   RotationMatrix(pos, target, up, rotationMatrix);
-  PerspectiveMatrix((65*PI)/180.0, 1.0, .5, 50, projectionMatrix);
+  PerspectiveMatrix((65*PI)/180.0, ((float)DDWIDTH)/DDHEIGHT, .5, 100, projectionMatrix);
   Eigen::Matrix4f viewMatrix = projectionMatrix * rotationMatrix;
 
 
   DrawDelegate::BeginFrame();
   DrawDelegate::SetViewMatrix(viewMatrix.data());
   Scene::DrawGrid(1);
-  DrawDelegate::SetLineSize(3);
-  DrawDelegate::DrawLines(points, pSize, colors, cSize);
+  if (drawPoints) {
+     DrawDelegate::SetLineSize(3);
+     DrawDelegate::DrawLines(points, pSize, colors, cSize);
+  }
+  if (frames% 100 == 0) {
+     printf("pSize %d\n", pSize);
+  }
 }
 void Scene::DrawGrid(int gridSize) {
   int x_flr = -20;

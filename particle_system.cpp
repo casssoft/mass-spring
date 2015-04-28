@@ -1,3 +1,4 @@
+#include <GLFW/glfw3.h>
 #include "particle_system.h"
 #include "draw_delegate.h"
 #include "meshgen.h"
@@ -11,9 +12,10 @@ ParticleSystem::ParticleSystem() {
   ground = false;
 }
 
-void ParticleSystem::Update(double timestep, bool implicit) {
-  if (implicit)  ImplicitEuler(timestep);
-  else ImplicitEulerSparse(timestep);
+void ParticleSystem::Update(double timestep, bool implicit, bool solveWithguess) {
+  //if (implicit)  ImplicitEuler(timestep);
+  //else
+  ImplicitEulerSparse(timestep, solveWithguess);
 
   if (ground) {
     for (int i = 0; i < particles.size(); i++) {
@@ -94,17 +96,9 @@ float* ParticleSystem::GetColors(int* size, int strainSize) {
     float strain = ((to->x - from->x).norm() - springs[i].L) / springs[i].L;
     if (strain < 0) strain *= -1;
 
-    strain *= strainSize;//10 + springs[i].k/1000;
+    strain *= strainSize;
     LerpColors(strain, &(colorTemp[i*6]));
-    /*colorTemp[i*6] = strain - 1;
-    colorTemp[i*6 + 1] = 0;
-    colorTemp[i*6 + 2] = strain;
-*/
     LerpColors(strain, &(colorTemp[i*6+3]));
-/*    colorTemp[i*6 + 3] = strain - 1;
-    colorTemp[i*6 + 4] = 0;
-    colorTemp[i*6 + 5] = strain;
-*/
   }
   return colorTemp.data();
 }
@@ -359,11 +353,6 @@ void ParticleSystem::CalculateParticleMass(int i, float springMass) {
   particles[i].iMass = 1/mass;
 }
 
-void ParticleSystem::Reset() {
-  particles.clear();
-  fixed_points.clear();
-  springs.clear();
-}
 
 void ParticleSystem::SetSpringProperties(double k, double c) {
   stiffness = k;
@@ -436,15 +425,26 @@ namespace {
 Eigen::SparseMatrix<double> iesA;
 Eigen::VectorXd iesb;
 
+bool hasPrev = false;
+Eigen::VectorXd vdiffprev;
+
 Eigen::SparseMatrix<double> iesdfdx;
 Eigen::SparseMatrix<double> iesdfdv;
 
 std::vector<Eigen::Triplet<double>> iesdfdxtriplet;
 std::vector<Eigen::Triplet<double>> iesdfdvtriplet;
 
+double curTime;
+double tripletTime = 0;
+double fromTripletTime = 0;
+double solveTime = 0;
+};
+void ParticleSystem::GetProfileInfo(double& triplet, double& fromTriplet, double& solve) {
+   triplet = tripletTime;
+   fromTriplet = fromTripletTime;
+   solve = solveTime;
 }
-
-void ParticleSystem::ImplicitEulerSparse(double timestep) {
+void ParticleSystem::ImplicitEulerSparse(double timestep, bool solveWithguess) {
   int vSize = 3 * particles.size();
   iesA.resize(vSize, vSize);
   iesb.resize(vSize);
@@ -457,6 +457,8 @@ void ParticleSystem::ImplicitEulerSparse(double timestep) {
   iesdfdxtriplet.clear();
   iesdfdvtriplet.clear();
 
+  curTime = glfwGetTime();
+  double tempTime;
   for (int i = 0; i < springs.size(); i++) {
     Particle *to, *from;
     if (springs[i].to < 0)
@@ -504,8 +506,15 @@ void ParticleSystem::ImplicitEulerSparse(double timestep) {
       //dfdv.block<3,3>(springs[i].from * 3, springs[i].from * 3) -= tempdv;
     }
   }
+  tempTime = glfwGetTime();
+  tripletTime += tempTime - curTime;
+  curTime = tempTime;
   iesdfdx.setFromTriplets(iesdfdxtriplet.begin(), iesdfdxtriplet.end());
   iesdfdv.setFromTriplets(iesdfdvtriplet.begin(), iesdfdvtriplet.end());
+
+  tempTime = glfwGetTime();
+  fromTripletTime += tempTime - curTime;;
+  curTime = tempTime;
 
   ComputeForces();
   Eigen::VectorXd v_0(vSize);
@@ -533,8 +542,17 @@ void ParticleSystem::ImplicitEulerSparse(double timestep) {
   iesA = iesA - (timestep * iesdfdv + timestep * timestep * iesdfdx);
   Eigen::VectorXd vdiff(vSize);
   Eigen::ConjugateGradient<Eigen::SparseMatrix<double> > cg;
+  cg.setTolerance(.001);
+  curTime = glfwGetTime();
+
   cg.compute(iesA);
-  vdiff = cg.solve(iesb);
+  if (hasPrev && solveWithguess) vdiff = cg.solveWithGuess(iesb, vdiffprev);
+  else vdiff = cg.solve(iesb);
+
+  solveTime += glfwGetTime() - curTime;
+
+  vdiffprev = vdiff;
+  hasPrev = true;
   for (int i = 0; i < particles.size(); i++) {
     particles[i].v[0] += vdiff[i * 3];
     particles[i].v[1] += vdiff[i * 3 + 1];
@@ -724,4 +742,11 @@ void ParticleSystem::GetSpringP(int i, Particle*& to, Particle*& from) {
     from = &(fixed_points[springs[i].from * -1 - 1]);
   else
     from = &(particles[springs[i].from]);
+}
+
+void ParticleSystem::Reset() {
+  particles.clear();
+  fixed_points.clear();
+  springs.clear();
+  hasPrev = false;
 }

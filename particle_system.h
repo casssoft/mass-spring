@@ -23,7 +23,7 @@ class Spring {
 class ParticleSystem {
  public:
   ParticleSystem();
-  void Update(double timestep, bool implicit);
+  void Update(double timestep, bool implicit, bool solveWithguess);
   float* GetPositions3d(int* size);
   void GetCameraPosAndSize(double* x, double* y, double*z);
   float* GetColors(int* size, int strainSize);
@@ -35,6 +35,8 @@ class ParticleSystem {
   void Reset();
   void SetSpringProperties(double k, double c);
 
+  void GetProfileInfo(double& triplet, double& fromtriplet, double& solve);
+
   std::vector<Spring> springs;
   std::vector<Particle> particles;
   std::vector<Particle> fixed_points;
@@ -43,7 +45,7 @@ class ParticleSystem {
   void ComputeForces();
   void ExplicitEuler(double timestep);
   void ImplicitEuler(double timestep);
-  void ImplicitEulerSparse(double timestep);
+  void ImplicitEulerSparse(double timestep, bool solveWithguess);
   void ImplicitEulerSolveForNewV(double timestep);
   std::vector<float> posTemp;
   std::vector<float> colorTemp;

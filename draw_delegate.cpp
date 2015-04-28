@@ -93,6 +93,10 @@ GLuint viewMatrixUniform;
 GLuint pointVBO;
 GLuint colorVBO;
 
+namespace {
+  int DDbufferSize = 10000;
+  int DDcolorbufferSize = 10000;
+};
 bool DrawDelegate::SetupOpenGL() {
 #ifndef MACOSX
         glCreateShader = (PFNGLCREATESHADERPROC) glfwGetProcAddress( "glCreateShader" );
@@ -189,21 +193,25 @@ bool DrawDelegate::SetupOpenGL() {
   glEnableVertexAttribArray(positionAttribute);
   glEnableVertexAttribArray(colorAttribute);
   /*-------------------------------------------------------------------------------------------------------*/
-  glClearColor(1,1,1,1);
 
 
   glGenBuffers(1, &colorVBO);
   glBindBuffer(GL_ARRAY_BUFFER, colorVBO);
-  glBufferData(GL_ARRAY_BUFFER, sizeof(float)*1000, NULL, GL_DYNAMIC_DRAW);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(float)*DDcolorbufferSize, NULL, GL_STREAM_DRAW);
   glBindBuffer(GL_ARRAY_BUFFER, 0);
 
   glGenBuffers(1, &pointVBO);
   glBindBuffer(GL_ARRAY_BUFFER, pointVBO);
-  glBufferData(GL_ARRAY_BUFFER, sizeof(float)*1000, NULL, GL_DYNAMIC_DRAW);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(float)*DDbufferSize, NULL, GL_STREAM_DRAW);
   glBindBuffer(GL_ARRAY_BUFFER, 0);
 
+  glBindBuffer(GL_ARRAY_BUFFER, colorVBO);
+  glVertexAttribPointer(colorAttribute, 3, GL_FLOAT, false, 0, 0);
+  glBindBuffer(GL_ARRAY_BUFFER, pointVBO);
+  glVertexAttribPointer(positionAttribute, 3, GL_FLOAT, false, 0, 0);
   glClearColor(1,1,1,1);
-  glLineWidth(5);
+  glColor4f(1.0,1.0,1.0,1.0);
+  //glLineWidth(5);
   return 1;
 }
 
@@ -215,32 +223,24 @@ void DrawDelegate::SetViewMatrix(float* viewmatrix) {
   glUniformMatrix4fv(viewMatrixUniform, 1, false, viewmatrix);
 }
 void DrawDelegate::BeginFrame() {
-  glClear(GL_COLOR_BUFFER_BIT);
-  glClear(GL_DEPTH_BUFFER_BIT);
-  glColor4f(1.0,1.0,1.0,1.0);
-  glBindBuffer(GL_ARRAY_BUFFER, colorVBO);
-  glVertexAttribPointer(colorAttribute, 3, GL_FLOAT, false, 0, 0);
-  glBindBuffer(GL_ARRAY_BUFFER, pointVBO);
-  glVertexAttribPointer(positionAttribute, 3, GL_FLOAT, false, 0, 0);
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 }
 
-namespace {
-  int DDbufferSize = 1000;
-  int DDcolorbufferSize = 1000;
-};
 void DrawDelegate::DrawLines(float* pos, int npos, float* color, int ncolor) {
-  while(npos > DDbufferSize)
-    DDbufferSize *= 2;
+  while(npos > DDbufferSize) {
+   printf("buffer not big enough\n");
+   DDbufferSize *= 2;
+  }
   while (ncolor > DDcolorbufferSize)
     DDcolorbufferSize *= 2;
   glBindBuffer(GL_ARRAY_BUFFER, colorVBO);
-  glBufferData(GL_ARRAY_BUFFER, sizeof(float)*DDcolorbufferSize, NULL, GL_DYNAMIC_DRAW);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(float)*DDcolorbufferSize, NULL, GL_STREAM_DRAW);
   glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(float) * ncolor, color);
   glBindBuffer(GL_ARRAY_BUFFER, pointVBO);
-  glBufferData(GL_ARRAY_BUFFER, sizeof(float)*DDbufferSize, NULL, GL_DYNAMIC_DRAW);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(float)*DDbufferSize, NULL, GL_STREAM_DRAW);
   glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(float) * npos, pos);
 
-  glDrawArrays(GL_LINES, 0, npos/2);
+  glDrawArrays(GL_LINES, 0, npos/3);
   GLenum temp = glGetError();
   if (temp != GL_NO_ERROR) {
     fprintf(stderr, "Got gl error: %d\n", temp);

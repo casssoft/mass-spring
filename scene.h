@@ -14,16 +14,16 @@ class Scene {
   void SetLimitFps(bool enable);
   void ToggleLimitFps();
   double GetFps();
-  void DrawScene(ParticleSystem* m, int strainSize, float xpos, float ypos, float zpos);
+  void DrawScene(ParticleSystem* m, int strainSize, float xpos, float ypos, float zpos, bool drawPoints);
   void DrawGrid(int gridSize);
  private:
+  int frames;
   bool limitFps;
   int GridFloor(double x, int mpG);
   std::vector<float> gridpoints;
   std::vector<float> gridcolors;
   double timestart;
   double curTime;
-  int frames;
   double timeAhead;
   double prevTime;
   double secondsPerFrame;

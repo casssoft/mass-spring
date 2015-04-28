@@ -15,6 +15,7 @@ void error_callback(int error, const char* description) {
 }
 int changeSetup = 0;
 bool implicitUpdate = false;
+bool solveWithguess = true;
 int bridgeL = 10;
 float xpos = 0, ypos = 0, zpos = -20;
 Scene* scene_p;
@@ -71,6 +72,10 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
       case 'L':
         xpos += 1;
         break;
+      case 'D':
+        if (solveWithguess) solveWithguess = false;
+        else solveWithguess = true;
+        printf("Solvewith guess: %d\n", (int) solveWithguess);
     }
   }
 }
@@ -106,7 +111,7 @@ int main(int argc, char **argv) {
   }
 
   //m.SetupSingleSpring();
-  m.SetupBridge(bridgeL);
+  m.SetupBendingBar();
   //m.SetupTriangle();
   //m.SetupMouseSpring(5);
 
@@ -114,7 +119,9 @@ int main(int argc, char **argv) {
   scene.InitTime();
   scene_p = &scene;
 
-
+  double curTime;
+  double simulatetime = 0;
+  int frames = 0;
   glfwSetKeyCallback(window, key_callback);
   while (!glfwWindowShouldClose(window)) {
 
@@ -136,19 +143,29 @@ int main(int argc, char **argv) {
         break;
     }
     changeSetup = 0;
-
+    curTime = glfwGetTime();
     // Update m
-    m.Update(scene.GetTimestep(), implicitUpdate);
+    m.Update(scene.GetTimestep(), implicitUpdate, solveWithguess);
 
+    double tempTime = glfwGetTime();
+    simulatetime += tempTime - curTime;
+    curTime = tempTime;
     // Draw
-    scene.DrawScene(&m, strainSize, xpos, ypos, zpos);
+    scene.DrawScene(&m, strainSize, xpos, ypos, zpos, implicitUpdate);
 
     glfwSwapBuffers(window);
-    glfwPollEvents();
 
+    glfwPollEvents();
+    frames++;
     scene.EndOfFrame();
   }
 
+  printf("Simulate time %f\n", simulatetime/frames);
+  printf("Frames %d\n", frames);
+  double triplet, fromtriplet, solve;
+  m.GetProfileInfo(triplet, fromtriplet, solve);
+  printf("Triplet %f, from %f, solve %f \n", triplet/frames, fromtriplet/frames, solve/frames);
+  printf("Total %f\n", triplet + fromtriplet + solve);
   glfwDestroyWindow(window);
 
   glfwTerminate();
