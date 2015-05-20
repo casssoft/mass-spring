@@ -46,6 +46,7 @@ class ParticleSystem {
   void ExplicitEuler(double timestep);
   void ImplicitEuler(double timestep);
   void ImplicitEulerSparse(double timestep, bool solveWithguess);
+  void ImplicitEulerSparseLU(double timestep, bool solveWithguess);
   void ImplicitEulerSolveForNewV(double timestep);
   std::vector<float> posTemp;
   std::vector<float> colorTemp;

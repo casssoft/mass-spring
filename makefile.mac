@@ -1,6 +1,6 @@
 CC=g++
 
-CFLAGS= -g -c -DMACOSX -I../ -Wno-write-strings -std=c++11 -O2
+CFLAGS= -c -DNDEBUG -DMACOSX -I../ -Wno-write-strings -std=c++11 -O2
 
 LIBS= libglfw3.a libtet.a -framework Cocoa -framework OpenGL -framework IOKit -framework CoreVideo -static-libgcc -static-libstdc++ -O2
 

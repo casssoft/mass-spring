@@ -422,17 +422,17 @@ namespace {
     }
   }
 
-Eigen::SparseMatrix<double> iesA;
-Eigen::VectorXd iesb;
-
 bool hasPrev = false;
 Eigen::VectorXd vdiffprev;
 
-Eigen::SparseMatrix<double> iesdfdx;
-Eigen::SparseMatrix<double> iesdfdv;
-
-std::vector<Eigen::Triplet<double>> iesdfdxtriplet;
-std::vector<Eigen::Triplet<double>> iesdfdvtriplet;
+//Eigen::SparseMatrix<double> iesA;
+//Eigen::VectorXd iesb;
+//
+//Eigen::SparseMatrix<double> iesdfdx;
+//Eigen::SparseMatrix<double> iesdfdv;
+//
+//std::vector<Eigen::Triplet<double>> iesdfdxtriplet;
+//std::vector<Eigen::Triplet<double>> iesdfdvtriplet;
 
 double curTime;
 double tripletTime = 0;
@@ -446,6 +446,15 @@ void ParticleSystem::GetProfileInfo(double& triplet, double& fromTriplet, double
 }
 void ParticleSystem::ImplicitEulerSparse(double timestep, bool solveWithguess) {
   int vSize = 3 * particles.size();
+  static Eigen::SparseMatrix<double> iesA;
+  static Eigen::VectorXd iesb;
+
+  static Eigen::SparseMatrix<double> iesdfdx;
+  static Eigen::SparseMatrix<double> iesdfdv;
+
+  static std::vector<Eigen::Triplet<double>> iesdfdxtriplet;
+  static std::vector<Eigen::Triplet<double>> iesdfdvtriplet;
+
   iesA.resize(vSize, vSize);
   iesb.resize(vSize);
   iesdfdx.resize(vSize, vSize);
@@ -541,7 +550,9 @@ void ParticleSystem::ImplicitEulerSparse(double timestep, bool solveWithguess) {
   iesb = timestep * (f_0 + timestep * (iesdfdx * v_0));
   iesA = iesA - (timestep * iesdfdv + timestep * timestep * iesdfdx);
   Eigen::VectorXd vdiff(vSize);
+  //Eigen::BiCGSTAB<Eigen::SparseMatrix<double> > cg;
   Eigen::ConjugateGradient<Eigen::SparseMatrix<double> > cg;
+  //cg.setMaxIterations(100);
   cg.setTolerance(.001);
   curTime = glfwGetTime();
 
@@ -553,6 +564,7 @@ void ParticleSystem::ImplicitEulerSparse(double timestep, bool solveWithguess) {
 
   vdiffprev = vdiff;
   hasPrev = true;
+  //printf("cg iteratons %d\n", cg.iterations());
   for (int i = 0; i < particles.size(); i++) {
     particles[i].v[0] += vdiff[i * 3];
     particles[i].v[1] += vdiff[i * 3 + 1];
@@ -562,19 +574,30 @@ void ParticleSystem::ImplicitEulerSparse(double timestep, bool solveWithguess) {
   }
 }
 
-void ParticleSystem::ImplicitEuler(double timestep) {
+void ParticleSystem::ImplicitEulerSparseLU(double timestep, bool solveWithguess) {
   int vSize = 3 * particles.size();
-  Eigen::MatrixXd A(vSize, vSize);
-  Eigen::VectorXd b(vSize);
+  static Eigen::SparseMatrix<double> iesA;
+  static Eigen::VectorXd iesb;
 
-  Eigen::MatrixXd dfdx(vSize, vSize);
-  Eigen::MatrixXd dfdv(vSize, vSize);
-  dfdx.setZero();
-  dfdv.setZero();
+  static Eigen::SparseMatrix<double> iesdfdx;
+  static Eigen::SparseMatrix<double> iesdfdv;
+
+  static std::vector<Eigen::Triplet<double>> iesdfdxtriplet;
+  static std::vector<Eigen::Triplet<double>> iesdfdvtriplet;
+
+  iesA.resize(vSize, vSize);
+  iesb.resize(vSize);
+  iesdfdx.resize(vSize, vSize);
+  iesdfdv.resize(vSize, vSize);
 
   Eigen::Matrix3d temp;
   Eigen::Matrix3d tempdv;
 
+  iesdfdxtriplet.clear();
+  iesdfdvtriplet.clear();
+
+  curTime = glfwGetTime();
+  double tempTime;
   for (int i = 0; i < springs.size(); i++) {
     Particle *to, *from;
     if (springs[i].to < 0)
@@ -599,25 +622,46 @@ void ParticleSystem::ImplicitEuler(double timestep) {
     tempdv = springs[i].c * ((springdir/length) * (springdir/length).transpose());
 
     if (springs[i].to >= 0 && springs[i].from >= 0) {
-      dfdx.block<3,3>(springs[i].to * 3, springs[i].from * 3) += temp;
-      dfdx.block<3,3>(springs[i].from * 3, springs[i].to * 3) += temp;
+      PushbackMatrix3d(iesdfdxtriplet, temp, springs[i].to * 3, springs[i].from * 3, 1);
+      //dfdx.block<3,3>(springs[i].to * 3, springs[i].from * 3) += temp;
+      PushbackMatrix3d(iesdfdxtriplet, temp, springs[i].from * 3, springs[i].to * 3, 1);
+      //dfdx.block<3,3>(springs[i].from * 3, springs[i].to * 3) += temp;
 
-      dfdv.block<3,3>(springs[i].to * 3, springs[i].from * 3) += tempdv;
-      dfdv.block<3,3>(springs[i].from * 3, springs[i].to * 3) += tempdv;
+      PushbackMatrix3d(iesdfdvtriplet, tempdv, springs[i].to * 3, springs[i].from * 3, 1);
+      //dfdv.block<3,3>(springs[i].to * 3, springs[i].from * 3) += tempdv;
+      PushbackMatrix3d(iesdfdvtriplet, tempdv, springs[i].from * 3, springs[i].to * 3, 1);
+      //dfdv.block<3,3>(springs[i].from * 3, springs[i].to * 3) += tempdv;
     }
     if (springs[i].to >= 0) {
-      dfdx.block<3,3>(springs[i].to * 3, springs[i].to * 3) -= temp;
-      dfdv.block<3,3>(springs[i].to * 3, springs[i].to * 3) -= tempdv;
+      PushbackMatrix3d(iesdfdxtriplet, temp, springs[i].to * 3, springs[i].to * 3, -1);
+      //dfdx.block<3,3>(springs[i].to * 3, springs[i].to * 3) -= temp;
+      PushbackMatrix3d(iesdfdvtriplet, tempdv, springs[i].to * 3, springs[i].to * 3, -1);
+      //dfdv.block<3,3>(springs[i].to * 3, springs[i].to * 3) -= tempdv;
     }
     if (springs[i].from >= 0) {
-      dfdx.block<3,3>(springs[i].from * 3, springs[i].from * 3) -= temp;
-      dfdv.block<3,3>(springs[i].from * 3, springs[i].from * 3) -= tempdv;
+      PushbackMatrix3d(iesdfdxtriplet, temp, springs[i].from * 3, springs[i].from * 3, -1);
+      //dfdx.block<3,3>(springs[i].from * 3, springs[i].from * 3) -= temp;
+      PushbackMatrix3d(iesdfdvtriplet, tempdv, springs[i].from * 3, springs[i].from * 3, -1);
+      //dfdv.block<3,3>(springs[i].from * 3, springs[i].from * 3) -= tempdv;
     }
   }
+  tempTime = glfwGetTime();
+  tripletTime += tempTime - curTime;
+  curTime = tempTime;
+  iesdfdx.setFromTriplets(iesdfdxtriplet.begin(), iesdfdxtriplet.end());
+  iesdfdv.setFromTriplets(iesdfdvtriplet.begin(), iesdfdvtriplet.end());
+
+  tempTime = glfwGetTime();
+  fromTripletTime += tempTime - curTime;;
+  curTime = tempTime;
+
   ComputeForces();
   Eigen::VectorXd v_0(vSize);
   Eigen::VectorXd f_0(vSize);
-  A.setZero();
+
+
+  std::vector<Eigen::Triplet<double>> masstriplet;
+
   for (int i = 0; i < particles.size(); i++) {
     v_0[i * 3] = particles[i].v[0];
     v_0[i * 3 + 1] = particles[i].v[1];
@@ -625,16 +669,26 @@ void ParticleSystem::ImplicitEuler(double timestep) {
     f_0[i * 3] = particles[i].f[0];
     f_0[i * 3 + 1] = particles[i].f[1];
     f_0[i * 3 + 2] = particles[i].f[2];
-    A.coeffRef(i*3,i*3) = 1/particles[i].iMass;
-    A.coeffRef(i*3+1,i*3+1) = 1/particles[i].iMass;
-    A.coeffRef(i*3+2,i*3+2) = 1/particles[i].iMass;
+    masstriplet.push_back(Eigen::Triplet<double>(i*3,i*3,1/particles[i].iMass));
+    masstriplet.push_back(Eigen::Triplet<double>(i*3+1,i*3+1,1/particles[i].iMass));
+    masstriplet.push_back(Eigen::Triplet<double>(i*3+2,i*3+2,1/particles[i].iMass));
+    //A.coeffRef(i*3,i*3) = 1/particles[i].iMass;
+    //A.coeffRef(i*3+1,i*3+1) = 1/particles[i].iMass;
+    //A.coeffRef(i*3+2,i*3+2) = 1/particles[i].iMass;
   }
-  b = timestep * (f_0 + timestep * (dfdx * v_0));
-  A = A - (timestep * dfdv + timestep * timestep * dfdx);
+  iesA.setFromTriplets(masstriplet.begin(), masstriplet.end());
+  iesb = timestep * (f_0 + timestep * (iesdfdx * v_0));
+  iesA = iesA - (timestep * iesdfdv + timestep * timestep * iesdfdx);
   Eigen::VectorXd vdiff(vSize);
-  Eigen::ConjugateGradient<Eigen::MatrixXd > cg;
-  cg.compute(A);
-  vdiff = cg.solve(b);
+  //Eigen::SparseLU<Eigen::SparseMatrix<double>, Eigen::COLAMDOrdering<int>> cg;
+  Eigen::SimplicialLDLT<Eigen::SparseMatrix<double> > cg;
+  curTime = glfwGetTime();
+
+  cg.compute(iesA);
+  vdiff = cg.solve(iesb);
+
+  solveTime += glfwGetTime() - curTime;
+
   for (int i = 0; i < particles.size(); i++) {
     particles[i].v[0] += vdiff[i * 3];
     particles[i].v[1] += vdiff[i * 3 + 1];

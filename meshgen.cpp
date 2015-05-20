@@ -170,5 +170,8 @@ void MeshGen::GenerateBar(double*& points, int& psize, std::vector<int>& edges) 
       edges.push_back(it.col());
     }
   }
-  fprintf(stderr, "We are here\n");
+  //for (int i = 0; i <out.numberofedges; ++i) {
+  //  edges.push_back(out.edgelist[i] - 1);
+  //}
+  //fprintf(stderr, "We are here\n");
 }
