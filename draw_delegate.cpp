@@ -226,6 +226,27 @@ void DrawDelegate::BeginFrame() {
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 }
 
+void DrawDelegate::DrawTriangles(float* pos, int npos, float* color, int ncolor) {
+  while(npos > DDbufferSize) {
+   printf("buffer not big enough\n");
+   DDbufferSize *= 2;
+  }
+  while (ncolor > DDcolorbufferSize)
+    DDcolorbufferSize *= 2;
+  glBindBuffer(GL_ARRAY_BUFFER, colorVBO);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(float)*DDcolorbufferSize, NULL, GL_STREAM_DRAW);
+  glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(float) * ncolor, color);
+  glBindBuffer(GL_ARRAY_BUFFER, pointVBO);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(float)*DDbufferSize, NULL, GL_STREAM_DRAW);
+  glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(float) * npos, pos);
+
+  glDrawArrays(GL_TRIANGLES, 0, npos/3);
+  GLenum temp = glGetError();
+  if (temp != GL_NO_ERROR) {
+    fprintf(stderr, "Got gl error: %d\n", temp);
+  }
+}
+
 void DrawDelegate::DrawLines(float* pos, int npos, float* color, int ncolor) {
   while(npos > DDbufferSize) {
    printf("buffer not big enough\n");

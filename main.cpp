@@ -133,13 +133,13 @@ int main(int argc, char **argv) {
         m.SetupSingleSpring();
         break;
       case 2:
-        m.SetupBridge(bridgeL);
+        //m.SetupBridge(bridgeL);
         break;
       case 3:
         m.SetupBendingBar();
         break;
       case 4:
-        m.SetupTriforce();
+        //m.SetupTriforce();
         break;
     }
     changeSetup = 0;

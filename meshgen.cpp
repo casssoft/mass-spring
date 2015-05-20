@@ -4,7 +4,7 @@
 #include "Eigen/Sparse"
 #include <vector>
 
-void MeshGen::GenerateBar(double*& points, int& psize, std::vector<int>& edges) {
+void MeshGen::GenerateBar(double*& points, int& psize, std::vector<int>& tets) {
   tetgenio in, out;
   tetgenio::facet *f;
   tetgenio::polygon *p;
@@ -31,7 +31,7 @@ void MeshGen::GenerateBar(double*& points, int& psize, std::vector<int>& edges) 
   for (i = 4; i < 8; i++) {
     in.pointlist[i * 3]     = in.pointlist[(i - 4) * 3];
     in.pointlist[i * 3 + 1] = in.pointlist[(i - 4) * 3 + 1];
-    in.pointlist[i * 3 + 2] = 12;
+    in.pointlist[i * 3 + 2] = 5;
   }
 
   in.numberoffacets = 6;
@@ -135,7 +135,7 @@ void MeshGen::GenerateBar(double*& points, int& psize, std::vector<int>& edges) 
   //   do quality mesh generation (q) with a specified quality bound
   //   (1.414), and apply a maximum volume constraint (a0.1).
 
-  tetrahedralize("pq1.414a.4", &in, &out);
+  tetrahedralize("pq1.414", &in, &out);
 
   points = new double[out.numberofpoints*3];
   for (int i = 0; i < out.numberofpoints*3;++i) {
@@ -146,32 +146,8 @@ void MeshGen::GenerateBar(double*& points, int& psize, std::vector<int>& edges) 
     }
   }
   psize = out.numberofpoints;
-  Eigen::SparseMatrix<int> springs(psize, psize);
 
-  std::vector<Eigen::Triplet<int>> springtriplets;
-  printf("Number of corners? %d\n", out.numberofcorners);
-  int teta,tetb,tetc,tetd;
-  for (int i = 0; i < out.numberoftetrahedra; ++i) {
-    teta = out.tetrahedronlist[i*4]-1;
-    tetb = out.tetrahedronlist[i*4+1]-1;
-    tetc = out.tetrahedronlist[i*4+2]-1;
-    tetd = out.tetrahedronlist[i*4+3]-1;
-    springtriplets.push_back(Eigen::Triplet<int>(teta, tetb, 1));
-    springtriplets.push_back(Eigen::Triplet<int>(teta, tetc, 1));
-    springtriplets.push_back(Eigen::Triplet<int>(teta, tetd, 1));
-    springtriplets.push_back(Eigen::Triplet<int>(tetb, tetc, 1));
-    springtriplets.push_back(Eigen::Triplet<int>(tetb, tetd, 1));
-    springtriplets.push_back(Eigen::Triplet<int>(tetc, tetd, 1));
+  for (int i = 0; i <out.numberoftetrahedra*4; ++i) {
+    tets.push_back(out.tetrahedronlist[i] - 1);
   }
-  springs.setFromTriplets(springtriplets.begin(), springtriplets.end());
-  for (int k=0; k<springs.outerSize(); ++k) {
-    for (Eigen::SparseMatrix<int>::InnerIterator it(springs,k); it; ++it) {
-      edges.push_back(it.row());
-      edges.push_back(it.col());
-    }
-  }
-  //for (int i = 0; i <out.numberofedges; ++i) {
-  //  edges.push_back(out.edgelist[i] - 1);
-  //}
-  //fprintf(stderr, "We are here\n");
 }

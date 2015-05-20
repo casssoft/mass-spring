@@ -20,34 +20,41 @@ class Spring {
   double c; //damping
 };
 
+class Tetrahedra {
+ public:
+ int to[4];
+ Eigen::Vector3d oldPos[3];
+ Eigen::Matrix3d inversePos;
+ double posDet;
+ double k;
+ double c;
+};
+
 class ParticleSystem {
  public:
   ParticleSystem();
   void Update(double timestep, bool implicit, bool solveWithguess);
   float* GetPositions3d(int* size);
+  float* GetTriangles3d(int* size);
   void GetCameraPosAndSize(double* x, double* y, double*z);
+  float* GetTriColors(int* size, int strainSize);
   float* GetColors(int* size, int strainSize);
   void SetupSingleSpring();
-  void SetupTriangle();
-  void SetupTriforce();
-  void SetupBridge(int bridgeL);
   void SetupBendingBar();
   void Reset();
   void SetSpringProperties(double k, double c);
 
   void GetProfileInfo(double& triplet, double& fromtriplet, double& solve);
 
-  std::vector<Spring> springs;
+  std::vector<Tetrahedra> tets;
   std::vector<Particle> particles;
   std::vector<Particle> fixed_points;
  private:
   void MakeFixedPoint(int i, std::vector<int>& edges);
   void ComputeForces();
   void ExplicitEuler(double timestep);
-  void ImplicitEuler(double timestep);
-  void ImplicitEulerSparse(double timestep, bool solveWithguess);
-  void ImplicitEulerSparseLU(double timestep, bool solveWithguess);
-  void ImplicitEulerSolveForNewV(double timestep);
+  void ImplicitEulerSparse(double timestep);
+
   std::vector<float> posTemp;
   std::vector<float> colorTemp;
   std::vector<double> phaseTemp;
@@ -55,8 +62,8 @@ class ParticleSystem {
   double dampness;
   double gravity;
   bool ground;
-  void AddSpring(int to, int from);
-  void GetSpringP(int i, Particle*& to, Particle*& from);
+  void AddTet(int x1, int x2, int x3, int x4);
+  void GetTetP(int i, Particle*& p1, Particle*& p2, Particle*& p3, Particle*& p4);
   void CalculateParticleMass(int i, float springMass);
 };
 #endif // PARTICLE_SYSTEM_H__
