@@ -28,6 +28,7 @@ class Tetrahedra {
  double posDet;
  double k;
  double c;
+ double strain;
 };
 
 class ParticleSystem {
@@ -55,6 +56,8 @@ class ParticleSystem {
   void ExplicitEuler(double timestep);
   void ImplicitEulerSparse(double timestep);
 
+  void CopyIntoStartPos();
+  std::vector<Eigen::Vector3d> startPos;
   std::vector<float> posTemp;
   std::vector<float> colorTemp;
   std::vector<double> phaseTemp;

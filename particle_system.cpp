@@ -99,18 +99,28 @@ float* ParticleSystem::GetPositions3d(int* size) {
   return posTemp.data();
 }
 
+static void LerpColors(double strain, float*color3) {
+   if (strain < 1) {
+      *(color3) = 0;
+      *(color3+1) = 0;
+      *(color3+2) = strain;
+   } else if (strain < 2) {
+      *(color3) = strain - 1;
+      *(color3+1) = 0;
+      *(color3+2) = strain;
+   } else {
+      *(color3) = 1;
+      *(color3+1) = 0;
+      *(color3+2) = 1 - (strain -2);
+   }
+}
+
 float* ParticleSystem::GetTriColors(int* size, int strainSize) {
   *size = tets.size()* 4 * 3 * 3;
   int perTet = 4 * 3 * 3;
   colorTemp.resize(*size);
-  for (int i = 0; i < *size/6; i++) {
-    colorTemp[i*6] = 0;
-    colorTemp[i*6 + 1] = 1;
-    colorTemp[i*6 + 2] = 0;
-
-    colorTemp[i*6 + 3] = 1;
-    colorTemp[i*6 + 4] = 0;
-    colorTemp[i*6 + 5] = 0;
+  for (int i = 0; i < *size/3; i++) {
+    LerpColors(tets[i/(4*3)].strain/10, &(colorTemp[i*3])); 
   }
   return colorTemp.data();
 }
@@ -197,21 +207,6 @@ void ParticleSystem::GetCameraPosAndSize(double* x, double*y, double* z) {
   *z /= particles.size() + fixed_points.size();
 }
 
-static void LerpColors(double strain, float*color3) {
-   if (strain < 1) {
-      *(color3) = 0;
-      *(color3+1) = 0;
-      *(color3+2) = strain;
-   } else if (strain < 2) {
-      *(color3) = strain - 1;
-      *(color3+1) = 0;
-      *(color3+2) = strain;
-   } else {
-      *(color3) = 1;
-      *(color3+1) = 0;
-      *(color3+2) = 1 - (strain -2);
-   }
-}
 
 float* ParticleSystem::GetColors(int* size, int strainSize) {
   *size = tets.size()* 6 * 3 * 2;
@@ -243,7 +238,8 @@ void ParticleSystem::SetupSingleSpring() {
   particles[2].x << -1, .5, -1;
   particles[2].v << 0.0, 0.0, 0.0;
   particles[2].iMass = 1;
-  
+ 
+  CopyIntoStartPos(); 
   fixed_points.emplace_back();
   fixed_points[0].x << 0, -.5, -1;
 
@@ -253,6 +249,13 @@ void ParticleSystem::SetupSingleSpring() {
 
 }
 
+void ParticleSystem::CopyIntoStartPos() {
+  startPos.clear();
+  for(int i = 0; i < particles.size(); ++i) {
+    startPos.emplace_back();
+    startPos[i] = particles[i].x;
+  }
+}
 
 void ParticleSystem::SetupBendingBar() {
   Reset();
@@ -275,8 +278,6 @@ void ParticleSystem::SetupBendingBar() {
       MakeFixedPoint(i, tets);
       psize -= 1;
       i--;
-    } else {
-      particles[i].v[0] = .5;
     }
   }
 
@@ -286,7 +287,11 @@ void ParticleSystem::SetupBendingBar() {
   //for (int i = 0; i < particles.size(); ++i) {
   //  CalculateParticleMass(i, 200.0/edges.size());
   //}
-  gravity = 5;
+  CopyIntoStartPos(); 
+  for (int i = 0; i < particles.size(); ++i) {
+    particles[i].x[1] += .01;
+  }
+  gravity = 1;
   ground = false;
   delete[] points;
 }
@@ -438,22 +443,20 @@ void ParticleSystem::ImplicitEulerSparse(double timestep) {
     v_0[i * 3] = particles[i].v[0];
     v_0[i * 3 + 1] = particles[i].v[1];
     v_0[i * 3 + 2] = particles[i].v[2];
-    x_0[i * 3] = particles[i].x[0];
-    x_0[i * 3 + 1] = particles[i].x[1];
-    x_0[i * 3 + 2] = particles[i].x[2];
+    x_0[i * 3] = particles[i].x[0] - startPos[i][0];
+    x_0[i * 3 + 1] = particles[i].x[1] - startPos[i][1];
+    x_0[i * 3 + 2] = particles[i].x[2] - startPos[i][2];
     masstriplet.push_back(Eigen::Triplet<double>(i*3,i*3,1/particles[i].iMass));
     masstriplet.push_back(Eigen::Triplet<double>(i*3+1,i*3+1,1/particles[i].iMass));
     masstriplet.push_back(Eigen::Triplet<double>(i*3+2,i*3+2,1/particles[i].iMass));
   }
   Eigen::VectorXd newv(vSize);
-  newv = v_0 + iesdfdx * x_0;
-  /*
+  //newv = v_0 + timestep * iesdfdx * x_0;
+  
   iesA.setFromTriplets(masstriplet.begin(), masstriplet.end());
   iesb = iesA * v_0 + timestep * (iesdfdx * x_0);
   iesA = iesA - (timestep * timestep * iesdfdx);
-  //Eigen::BiCGSTAB<Eigen::SparseMatrix<double> > cg;
   Eigen::ConjugateGradient<Eigen::SparseMatrix<double> > cg;
-  //cg.setMaxIterations(100);
   cg.setTolerance(.0001);
 
   cg.compute(iesA);
@@ -462,7 +465,7 @@ void ParticleSystem::ImplicitEulerSparse(double timestep) {
 
   vdiffprev = newv;
   hasPrev = true;
-*/
+
   for (int i = 0; i < particles.size(); i++) {
     particles[i].v[0] = newv[i * 3];
     particles[i].v[1] = newv[i * 3 + 1];
@@ -512,6 +515,7 @@ void ParticleSystem::ComputeForces() {
                     stressVec[5], stressVec[4], stressVec[2];
     std::cout << "STRESS" << std::endl;
     std::cout << stressTensor << std::endl;
+    tets[i].strain = stressTensor.norm();
     //stressTensor = greenStrainTensor;
     // Lets loop over faces and apply stress
     for(int j = 0; j < 4; j++) {
@@ -561,7 +565,7 @@ void ParticleSystem::ExplicitEuler(double timestep) {
     particles[i].v[1] = phaseTemp[i * 6 + 4];
     particles[i].v[2] = phaseTemp[i * 6 + 5];
     particles[i].v += particles[i].f * particles[i].iMass * timestep;
-    particles[i].v *= .95;
+    //particles[i].v *= .95;
     particles[i].x += particles[i].v * timestep;
   }
 }

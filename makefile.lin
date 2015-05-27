@@ -1,13 +1,13 @@
 CC=g++
 
-CFLAGS= -g -c `PKG_CONFIG_PATH=~/seniorproject/glfw-3.1.1/src pkg-config --cflags glfw3` -I.. -I../glfw-3.1.1/include/ -Wno-write-strings -std=c++0x
+CFLAGS= -g -c `PKG_CONFIG_PATH=~/seniorproject/glfw-3.1.1/src pkg-config --cflags glfw3` -I.. -I../glfw-3.1.1/include/ -Wno-write-strings -std=c++0x -O2
 
-LIBS=-L../glfw-3.1.1/src/ `PKG_CONFIG_PATH=~/seniorproject/glfw-3.1.1/src pkg-config --static --libs glfw3`
+LIBS=-L../glfw-3.1.1/src/ `PKG_CONFIG_PATH=~/seniorproject/glfw-3.1.1/src pkg-config --static --libs glfw3` libtet.a -O2
 
 EXE=explicitspring
 
 
-OBJS=main.o draw_delegate.o particle_system.o duckrace.o scene.o
+OBJS=main.o draw_delegate.o particle_system.o meshgen.o scene.o
 
 build : $(EXE)
 
@@ -20,11 +20,11 @@ main.o : main.cpp draw_delegate.h particle_system.h scene.h
 draw_delegate.o : draw_delegate.cpp draw_delegate.h
 	$(CC) draw_delegate.cpp $(CFLAGS) -o $@
 
-particle_system.o : particle_system.cpp particle_system.h
+particle_system.o : particle_system.cpp particle_system.h draw_delegate.h meshgen.h
 	$(CC) particle_system.cpp $(CFLAGS) -o $@
 
-duckrace.o : duckrace.cpp duckrace.h particle_system.h
-	$(CC) duckrace.cpp $(CFLAGS) -o $@
+meshgen.o : meshgen.cpp meshgen.h
+	$(CC) meshgen.cpp $(CFLAGS) -o $@
 
 scene.o : scene.cpp scene.h draw_delegate.h
 	$(CC) scene.cpp $(CFLAGS) -o $@
