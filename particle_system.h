@@ -67,6 +67,7 @@ class ParticleSystem {
   bool ground;
   void AddTet(int x1, int x2, int x3, int x4);
   void GetTetP(int i, Particle*& p1, Particle*& p2, Particle*& p3, Particle*& p4);
+  void GetPointP(int i, Particle*& x1);
   void CalculateParticleMass(int i, float springMass);
 };
 #endif // PARTICLE_SYSTEM_H__

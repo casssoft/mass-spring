@@ -9,13 +9,19 @@
 #include <unistd.h> // usleep
 
 #include <cmath>
-
+#include <iostream>
 #include "particle_system.h"
 
 #include "Eigen/Dense"
 
 Scene::Scene() {
   limitFps = true;
+  xpos = ypos = 0;
+  zpos = -20;
+  xtarg = ytarg = 0;
+  ztarg = 0;
+  walkForward = walkBack = walkRight = walkLeft = false;
+  displaySurface = true;
 }
 
 void Scene::InitTime() {
@@ -104,20 +110,30 @@ void PerspectiveMatrix(float fovY, float aspect, float near, float far, Eigen::M
 
 #define PI 3.14159265
 }
-void Scene::DrawScene(ParticleSystem* m, int strainSize, float xpos, float ypos, float zpos, bool drawPoints) {
+void Scene::DrawScene(ParticleSystem* m, int strainSize, bool drawPoints) {
   int pSize;
   int cSize;
   //float* points = m->GetPositions3d(&pSize);
   //float* colors = m->GetColors(&cSize, strainSize);
 
-  float* points = m->GetTriangles3d(&pSize);
-  float* colors = m->GetTriColors(&cSize, strainSize);
+  float *points, *colors;
+  if (displaySurface) {
+    points = m->GetTriangles3d(&pSize);
+    colors = m->GetTriColors(&cSize, strainSize);
+  } else {
+    points = m->GetPositions3d(&pSize);
+    colors = m->GetColors(&cSize, strainSize);
+  }
+
   Eigen::Matrix4f rotationMatrix;
   Eigen::Matrix4f projectionMatrix;
   rotationMatrix.setZero();
   projectionMatrix.setZero();
   Eigen::Vector3f pos, target, up;
   pos << xpos, ypos, zpos;
+  xtarg = points[0];
+  ytarg = points[1];
+  ztarg = points[2];
   target << points[0], points[1], points[2];
   up << 0, -1, 0;
   RotationMatrix(pos, target, up, rotationMatrix);
@@ -130,11 +146,35 @@ void Scene::DrawScene(ParticleSystem* m, int strainSize, float xpos, float ypos,
   Scene::DrawGrid(1);
   if (drawPoints) {
      DrawDelegate::SetLineSize(3);
-     DrawDelegate::DrawTriangles(points, pSize, colors, cSize);
+     if (displaySurface)
+       DrawDelegate::DrawTriangles(points, pSize, colors, cSize);
+     else
+       DrawDelegate::DrawLines(points, pSize, colors, cSize);
   }
   if (frames% 100 == 0) {
      printf("pSize %d\n", pSize);
   }
+}
+
+void Scene::Update(double timestep) {
+  Eigen::Vector3d pos, targ, up, walkvector;
+  pos << xpos, ypos, zpos;
+  targ << xtarg, ytarg, ztarg;
+  targ = targ - pos;
+  targ.normalize();
+  up << 0, -1, 0;
+  walkvector << 0, 0, 0;
+  if (walkForward) walkvector += targ;
+  if (walkBack) walkvector -= targ;
+  if (walkLeft) walkvector += up.cross(targ);
+  if (walkRight) walkvector += targ.cross(up);
+  if (walkForward || walkBack || walkLeft || walkRight)
+    walkvector.normalize();
+  pos += walkvector * timestep * 5;
+  xpos = pos[0];
+  ypos = pos[1];
+  zpos = pos[2];
+
 }
 void Scene::DrawGrid(int gridSize) {
   int x_flr = -20;

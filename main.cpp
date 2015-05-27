@@ -17,7 +17,6 @@ int changeSetup = 0;
 bool implicitUpdate = false;
 bool solveWithguess = true;
 int bridgeL = 10;
-float xpos = 0, ypos = 0, zpos = -20;
 Scene* scene_p;
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
@@ -61,21 +60,39 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
         bridgeL--;
         break;
       case 'I':
-        zpos += 1;
+        scene_p->walkForward = true;
         break;
       case 'K':
-        zpos -= 1;
+        scene_p->walkBack = true;
         break;
       case 'J':
-        xpos -= 1;
+        scene_p->walkLeft = true;
         break;
       case 'L':
-        xpos += 1;
+        scene_p->walkRight = true;
         break;
       case 'D':
         if (solveWithguess) solveWithguess = false;
         else solveWithguess = true;
         printf("Solvewith guess: %d\n", (int) solveWithguess);
+      case 'Z':
+        scene_p->displaySurface = scene_p->displaySurface ? false : true;
+        break;
+    }
+  } else if (action == GLFW_RELEASE) {
+    switch(key) {
+      case 'I':
+        scene_p->walkForward = false;
+        break;
+      case 'K':
+        scene_p->walkBack = false;
+        break;
+      case 'J':
+        scene_p->walkLeft = false;
+        break;
+      case 'L':
+        scene_p->walkRight = false;
+        break;
     }
   }
 }
@@ -145,13 +162,19 @@ int main(int argc, char **argv) {
     changeSetup = 0;
     curTime = glfwGetTime();
     // Update m
-    m.Update(scene.GetTimestep(), implicitUpdate, solveWithguess);
+    double timestep = scene.GetTimestep();
+
+    m.Update(timestep, implicitUpdate, solveWithguess);
 
     double tempTime = glfwGetTime();
     simulatetime += tempTime - curTime;
     curTime = tempTime;
+
+    // Update scene pos
+    scene.Update(timestep);
+
     // Draw
-    scene.DrawScene(&m, strainSize, xpos, ypos, zpos, implicitUpdate);
+    scene.DrawScene(&m, strainSize, implicitUpdate);
 
     glfwSwapBuffers(window);
 
