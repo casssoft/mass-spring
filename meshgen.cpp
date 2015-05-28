@@ -31,7 +31,7 @@ void MeshGen::GenerateBar(double*& points, int& psize, std::vector<int>& tets) {
   for (i = 4; i < 8; i++) {
     in.pointlist[i * 3]     = in.pointlist[(i - 4) * 3];
     in.pointlist[i * 3 + 1] = in.pointlist[(i - 4) * 3 + 1];
-    in.pointlist[i * 3 + 2] = 20;
+    in.pointlist[i * 3 + 2] = 10;
   }
 
   in.numberoffacets = 6;
@@ -135,7 +135,7 @@ void MeshGen::GenerateBar(double*& points, int& psize, std::vector<int>& tets) {
   //   do quality mesh generation (q) with a specified quality bound
   //   (1.414), and apply a maximum volume constraint (a0.1).
 
-  tetrahedralize("pq1.414a1", &in, &out);
+  tetrahedralize("pq1.414a.5", &in, &out);
 
   points = new double[out.numberofpoints*3];
   for (int i = 0; i < out.numberofpoints*3;++i) {

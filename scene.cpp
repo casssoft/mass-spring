@@ -22,6 +22,7 @@ Scene::Scene() {
   ztarg = 0;
   walkForward = walkBack = walkRight = walkLeft = false;
   displaySurface = true;
+  slowMode = false;
 }
 
 void Scene::InitTime() {
@@ -65,6 +66,7 @@ void Scene::RecalculateFps() {
 }
 
 double Scene::GetTimestep() {
+  if (slowMode) return secondsPerFrame/20;
   return secondsPerFrame;
 }
 
@@ -122,7 +124,7 @@ void Scene::DrawScene(ParticleSystem* m, int strainSize, bool drawPoints) {
     colors = m->GetTriColors(&cSize, strainSize);
   } else {
     points = m->GetPositions3d(&pSize);
-    colors = m->GetColors(&cSize, strainSize);
+    colors = m->GetColors(&cSize, strainSize, xpos, ypos, zpos);
   }
 
   Eigen::Matrix4f rotationMatrix;

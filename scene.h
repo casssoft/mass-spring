@@ -20,6 +20,7 @@ class Scene {
 
   bool walkForward, walkBack, walkRight, walkLeft;
   bool displaySurface;
+  bool slowMode;
  private:
   int frames;
   bool limitFps;

@@ -35,6 +35,45 @@ void ParticleSystem::Update(double timestep, bool implicit, bool solveWithguess)
   }
 }
 
+static void LerpColors(double strain, float*color3) {
+   if (strain < 1) {
+      *(color3) = 0;
+      *(color3+1) = 0;
+      *(color3+2) = strain;
+   } else if (strain < 2) {
+      *(color3) = strain - 1;
+      *(color3+1) = 0;
+      *(color3+2) = strain;
+   } else {
+      *(color3) = 1;
+      *(color3+1) = 0;
+      *(color3+2) = 1 - (strain -2);
+   }
+}
+
+
+float* ParticleSystem::GetColors(int* size, int strainSize, float xpos, float ypos, float zpos) {
+  *size = tets.size()* 6 * 3 * 2;
+  int perTet = 6 * 3 * 2;
+  colorTemp.resize(*size);
+  Eigen::Vector3d campos;
+  campos << xpos, ypos, zpos;
+  for (int i = 0; i < *size/3; i++) {
+    Eigen::Vector3d ppos;
+    ppos << posTemp[i*3], posTemp[i*3+1], posTemp[i*3+2];
+    double color = 1/(ppos - campos).norm();
+
+    colorTemp[i*3] = color + (i%2)/2.0;
+    colorTemp[i*3 + 1] = color;
+    colorTemp[i*3 + 2] = color + ((i+1)%2)/2.0;
+
+    //colorTemp[i*6 + 3] = 1;
+    //colorTemp[i*6 + 4] = 0;
+    //colorTemp[i*6 + 5] = 0;
+  }
+  return colorTemp.data();
+}
+
 float* ParticleSystem::GetPositions3d(int* size) {
   *size = tets.size()* 6 * 3 * 2;
   int perTet = 6 * 3 * 2;
@@ -98,22 +137,6 @@ float* ParticleSystem::GetPositions3d(int* size) {
     posTemp[i*perTet + c++] = ((float)p4->x[2]);
   }
   return posTemp.data();
-}
-
-static void LerpColors(double strain, float*color3) {
-   if (strain < 1) {
-      *(color3) = 0;
-      *(color3+1) = 0;
-      *(color3+2) = strain;
-   } else if (strain < 2) {
-      *(color3) = strain - 1;
-      *(color3+1) = 0;
-      *(color3+2) = strain;
-   } else {
-      *(color3) = 1;
-      *(color3+1) = 0;
-      *(color3+2) = 1 - (strain -2);
-   }
 }
 
 float* ParticleSystem::GetTriColors(int* size, int strainSize) {
@@ -234,23 +257,6 @@ void ParticleSystem::GetCameraPosAndSize(double* x, double*y, double* z) {
   *x /= particles.size() + fixed_points.size();
   *y /= particles.size() + fixed_points.size();
   *z /= particles.size() + fixed_points.size();
-}
-
-
-float* ParticleSystem::GetColors(int* size, int strainSize) {
-  *size = tets.size()* 6 * 3 * 2;
-  int perTet = 6 * 3 * 2;
-  colorTemp.resize(*size);
-  for (int i = 0; i < *size/6; i++) {
-    colorTemp[i*6] = 0;
-    colorTemp[i*6 + 1] = 1;
-    colorTemp[i*6 + 2] = 0;
-
-    colorTemp[i*6 + 3] = 1;
-    colorTemp[i*6 + 4] = 0;
-    colorTemp[i*6 + 5] = 0;
-  }
-  return colorTemp.data();
 }
 
 void ParticleSystem::SetupSingleSpring() {
@@ -437,19 +443,26 @@ void ParticleSystem::ImplicitEulerSparse(double timestep) {
 
     // Get Rotation matrix
     Eigen::Matrix3d Rot;
+    //{
+    //  Eigen::Matrix3d m1,m2;
+    //  Eigen::Vector3d r0,r1,r2;
+    //  m1 << p2->x - p1->x, p3->x - p1->x, p4->x - p1->x;
+    //  m2 = m1 * tets[i].inversePos;
+    //  r0 = (m2.col(0)).normalized();
+    //  r1 = (m2.col(1) - r0.dot(m2.col(1)) * r0).normalized();
+    //  r2 = r0.cross(r1);
+    //  Rot.col(0) = r0;
+    //  Rot.col(1) = r1;
+    //  Rot.col(2) = r2;
+    //}
     {
-      Eigen::Matrix3d m1,m2;
-      Eigen::Vector3d r0,r1,r2;
-      m1 << p2->x - p1->x, p3->x - p1->x, p4->x - p1->x;
-      m2 = m1 * tets[i].inversePos;
-      r0 = (m2.col(0)).normalized();
-      r1 = (m2.col(1) - r0.dot(m2.col(1)) * r0).normalized();
-      r2 = r0.cross(r1);
-      Rot.col(0) = r0;
-      Rot.col(1) = r1;
-      Rot.col(2) = r2;
+      Eigen::Matrix3d mapping1, mapping2;
+      mapping1 << p2->x - p1->x, p3->x - p1->x, p4->x - p1->x;
+      mapping2 = mapping1 * tets[i].inversePos;
+      Eigen::Affine3d trans1;
+      trans1 = mapping2;
+      Rot = trans1.rotation();
     }
-
     // for all combos
     for (int index1 = 0; index1 < 4; ++index1) {
       if (tets[i].to[index1] < 0) continue;
