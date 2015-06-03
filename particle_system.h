@@ -34,14 +34,20 @@ class Tetrahedra {
 class ParticleSystem {
  public:
   ParticleSystem();
-  void Update(double timestep, bool implicit, bool solveWithguess);
+  void Update(double timestep, bool solveWithguess, bool corotational);
   float* GetPositions3d(int* size);
   float* GetTriangles3d(int* size);
+  float* GetTetCenter(int*size);
+
   void GetCameraPosAndSize(double* x, double* y, double*z);
-  float* GetTriColors(int* size, int strainSize);
-  float* GetColors(int* size, int strainSize, float x, float y, float z);
+  float* GetTriColors(int* size, double strainSize);
+  float* GetStrainTriColors(int* size, double strainSize);
+  float* GetColors(int* size, double strainSize, float x, float y, float z);
+  float* GetCenterColors(int*size, double strainSize);
+
   void SetupSingleSpring();
   void SetupBendingBar();
+  void SetupArmadillo();
   void Reset();
   void SetSpringProperties(double k, double c);
 
@@ -65,6 +71,7 @@ class ParticleSystem {
   double dampness;
   double gravity;
   bool ground;
+  bool corotational;
   void AddTet(int x1, int x2, int x3, int x4);
   void GetTetP(int i, Particle*& p1, Particle*& p2, Particle*& p3, Particle*& p4);
   void GetPointP(int i, Particle*& x1);

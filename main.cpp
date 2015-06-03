@@ -14,8 +14,9 @@ void error_callback(int error, const char* description) {
   fprintf(stderr, "%s\n", description);
 }
 int changeSetup = 0;
-bool implicitUpdate = false;
+bool drawSimulation = true;
 bool solveWithguess = true;
+bool corotational = false;
 int bridgeL = 10;
 Scene* scene_p;
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
@@ -47,11 +48,15 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
         break;
 
       case 'S':
-        if (implicitUpdate) implicitUpdate = false;
-        else implicitUpdate = true;
-        printf("Implicit: %d\n", (int) implicitUpdate);
+        if (drawSimulation) drawSimulation = false;
+        else drawSimulation = true;
+        printf("Implicit: %d\n", (int) drawSimulation);
         break;
-
+      case 'D':
+        if (solveWithguess) solveWithguess = false;
+        else solveWithguess = true;
+        printf("Solvewith guess: %d\n", (int) solveWithguess);
+        break;
       case 'Q':
         bridgeL++;
         break;
@@ -71,15 +76,14 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
       case 'L':
         scene_p->walkRight = true;
         break;
-      case 'D':
-        if (solveWithguess) solveWithguess = false;
-        else solveWithguess = true;
-        printf("Solvewith guess: %d\n", (int) solveWithguess);
       case 'Z':
-        scene_p->displaySurface = scene_p->displaySurface ? false : true;
+        scene_p->drawMode = (scene_p->drawMode + 1)%4;
         break;
       case 'X':
         scene_p->slowMode = scene_p->slowMode ? false : true;
+        break;
+      case 'C':
+        corotational = corotational ? false : true;
         break;
     }
   } else if (action == GLFW_RELEASE) {
@@ -121,12 +125,11 @@ int main(int argc, char **argv) {
 
   // Particle system setup
   ParticleSystem m;
-  int strainSize = 10;
-  if (argc >= 4) {
+  double strainSize = 10;
+  if (argc >= 3) {
     m.SetSpringProperties(atof(argv[1]), atof(argv[2]));
-    implicitUpdate = atoi(argv[3]);
-    if (argc == 5) {
-      strainSize = atoi(argv[4]);
+    if (argc == 4) {
+      strainSize = atof(argv[3]);
     }
   }
 
@@ -153,7 +156,7 @@ int main(int argc, char **argv) {
         m.SetupSingleSpring();
         break;
       case 2:
-        //m.SetupBridge(bridgeL);
+        m.SetupArmadillo();
         break;
       case 3:
         m.SetupBendingBar();
@@ -167,17 +170,18 @@ int main(int argc, char **argv) {
     // Update m
     double timestep = scene.GetTimestep();
 
-    m.Update(timestep, implicitUpdate, solveWithguess);
+    m.Update(timestep, solveWithguess, corotational);
 
-    double tempTime = glfwGetTime();
-    simulatetime += tempTime - curTime;
-    curTime = tempTime;
 
     // Update scene pos
     scene.Update(timestep);
 
     // Draw
-    scene.DrawScene(&m, strainSize, implicitUpdate);
+    scene.DrawScene(&m, strainSize, drawSimulation);
+
+    double tempTime = glfwGetTime();
+    simulatetime += tempTime - curTime;
+    curTime = tempTime;
 
     glfwSwapBuffers(window);
 

@@ -14,14 +14,15 @@ ParticleSystem::ParticleSystem() {
   ground = false;
 }
 
-void ParticleSystem::Update(double timestep, bool implicit, bool solveWithguess) {
+void ParticleSystem::Update(double timestep, bool solveWithguess, bool coro) {
+  corotational = coro;
   ImplicitEulerSparse(timestep);
   //ExplicitEuler(timestep);
 
   if (ground) {
     for (int i = 0; i < particles.size(); i++) {
-      if (particles[i].x[1] > DDHEIGHT-20) {
-        particles[i].x[1] = DDHEIGHT - 20;
+      if (particles[i].x[1] > 5) {
+        particles[i].x[1] = 5;
         if (particles[i].v[1] > 0) {
             particles[i].v[1] = -.8 * particles[i].v[1];
           /*if (particles[i].v[0] > 0) {
@@ -51,8 +52,63 @@ static void LerpColors(double strain, float*color3) {
    }
 }
 
+float* ParticleSystem::GetTetCenter(int* size) {
+  *size = tets.size() * 3;
+  posTemp.resize(*size);
+  for (int i = 0; i < *size/3; i++) {
+    Particle *p1, *p2, *p3, *p4;
+    GetTetP(i, p1, p2, p3, p4);
+    Eigen::Vector3d avg = (p1->x + p2->x + p3->x + p4->x)/4;
+    posTemp[i*3] = avg[0];
+    posTemp[i*3+1] = avg[1];
+    posTemp[i*3+2] = avg[2];
+  }
+  return posTemp.data();
+}
 
-float* ParticleSystem::GetColors(int* size, int strainSize, float xpos, float ypos, float zpos) {
+float* ParticleSystem::GetCenterColors(int*size, double strainSize) {
+  *size = tets.size() * 3;
+  colorTemp.resize(*size);
+  for (int i = 0; i < *size/3; i++) {
+    Particle *p1, *p2, *p3, *p4;
+    GetTetP(i, p1, p2, p3, p4);
+    Eigen::Matrix3d temp;
+    temp << p2->x - p1->x, p3->x - p1->x, p4->x - p1->x;
+    Eigen::Matrix3d deformGradient = (temp * tets[i].inversePos) - Eigen::Matrix3d::Identity();
+    Eigen::Matrix3d greenStrainTensor;
+    if (corotational) {
+      greenStrainTensor = .5 * (deformGradient + deformGradient.transpose() +
+                                                deformGradient.transpose() * deformGradient);
+    } else {
+      greenStrainTensor = .5 * (deformGradient + deformGradient.transpose());
+    }
+    double v = .4;
+    Eigen::VectorXd strainVec(6);
+    strainVec << greenStrainTensor(0,0), greenStrainTensor(1,1),
+                                    greenStrainTensor(2,2), greenStrainTensor(1,0),
+                                    greenStrainTensor(1,2), greenStrainTensor(2,0);
+
+    Eigen::MatrixXd strainToStress(6,6);
+    strainToStress << 1 - v, v, v, 0, 0, 0,
+                                           v, 1 - v, v, 0, 0, 0,
+                                           v, v, 1 - v, 0, 0, 0,
+                                           0, 0, 0, 1 - 2*v, 0, 0,
+                                           0, 0, 0, 0, 1 - 2*v, 0,
+                                           0, 0, 0, 0, 0, 1 - 2*v;
+    Eigen::VectorXd stressVec(6);
+    stressVec = (tets[i].k/((1 + v) * (1 - 2*v))) * strainToStress * strainVec;
+    Eigen::Matrix3d stressTensor;
+    stressTensor << stressVec[0], stressVec[3], stressVec[5],
+                    stressVec[3], stressVec[1], stressVec[4],
+                    stressVec[5], stressVec[4], stressVec[2];
+    double strain = stressTensor.norm();
+
+    LerpColors(strain * strainSize, &(colorTemp[i*3]));
+  }
+  return colorTemp.data();
+}
+
+float* ParticleSystem::GetColors(int* size, double strainSize, float xpos, float ypos, float zpos) {
   *size = tets.size()* 6 * 3 * 2;
   int perTet = 6 * 3 * 2;
   colorTemp.resize(*size);
@@ -139,7 +195,7 @@ float* ParticleSystem::GetPositions3d(int* size) {
   return posTemp.data();
 }
 
-float* ParticleSystem::GetTriColors(int* size, int strainSize) {
+float* ParticleSystem::GetTriColors(int* size, double strainSize) {
   *size = tets.size()* 4 * 3 * 3;
   int perTri = 3 * 3;
   colorTemp.resize(*size);
@@ -173,6 +229,54 @@ float* ParticleSystem::GetTriColors(int* size, int strainSize) {
     colorTemp[i*perTri + c2++] = color1+color2;
     colorTemp[i*perTri + c2++] = color1+color2;
     //LerpColors((i/(4*3))/10, &(colorTemp[i*3])); 
+  }
+  return colorTemp.data();
+}
+
+float* ParticleSystem::GetStrainTriColors(int* size, double strainSize) {
+  *size = tets.size()* 4 * 3 * 3;
+  int perTet = 4 * 3 * 3;
+  colorTemp.resize(*size);
+  for (int i = 0; i < *size/perTet; i++) {
+    Particle *p1,*p2,*p3,*p4;
+    GetTetP(i, p1, p2, p3, p4);
+
+    Eigen::Matrix3d temp;
+    temp << p2->x - p1->x, p3->x - p1->x, p4->x - p1->x;
+    Eigen::Matrix3d deformGradient = (temp * tets[i].inversePos) - Eigen::Matrix3d::Identity();
+    Eigen::Matrix3d greenStrainTensor;
+    if (corotational) {
+      greenStrainTensor = .5 * (deformGradient + deformGradient.transpose() +
+                                                deformGradient.transpose() * deformGradient);
+    } else {
+      greenStrainTensor = .5 * (deformGradient + deformGradient.transpose());
+    }
+    double v = .4;
+    Eigen::VectorXd strainVec(6);
+    strainVec << greenStrainTensor(0,0), greenStrainTensor(1,1),
+                                    greenStrainTensor(2,2), greenStrainTensor(1,0),
+                                    greenStrainTensor(1,2), greenStrainTensor(2,0);
+
+    Eigen::MatrixXd strainToStress(6,6);
+    strainToStress << 1 - v, v, v, 0, 0, 0,
+                                           v, 1 - v, v, 0, 0, 0,
+                                           v, v, 1 - v, 0, 0, 0,
+                                           0, 0, 0, 1 - 2*v, 0, 0,
+                                           0, 0, 0, 0, 1 - 2*v, 0,
+                                           0, 0, 0, 0, 0, 1 - 2*v;
+    Eigen::VectorXd stressVec(6);
+    stressVec = (tets[i].k/((1 + v) * (1 - 2*v))) * strainToStress * strainVec;
+    Eigen::Matrix3d stressTensor;
+    stressTensor << stressVec[0], stressVec[3], stressVec[5],
+                    stressVec[3], stressVec[1], stressVec[4],
+                    stressVec[5], stressVec[4], stressVec[2];
+    double strain = stressTensor.norm();
+   
+    int c = 0;
+    while(c < perTet) {
+      LerpColors(strain * strainSize, &(colorTemp[i*perTet+c]));
+      c += 3;
+    }
   }
   return colorTemp.data();
 }
@@ -342,6 +446,51 @@ void ParticleSystem::SetupBendingBar() {
   delete[] points;
 }
 
+void ParticleSystem::SetupArmadillo() {
+  Reset();
+  int psize;
+  double* points;
+  std::vector<int> tets;
+  MeshGen::GenerateMesh(points, psize, tets, "Armadillo_simple2.ply");
+
+  printf("Psize: %d, esize %d\n",psize, tets.size());
+
+  for (int i = 0; i < psize; ++i) {
+    particles.emplace_back();
+    particles[i].x << points[i*3], points[i*3 + 1], points[i*3 + 2];
+    particles[i].v << 0, 0, 0;
+    particles[i].iMass = psize/20.0;
+  }
+  for (int i = 0; i < psize; ++i) {
+    if (particles[i].x[1] < -6 && particles[i].x[0] < 2) {
+      printf("fixed_point!\n");
+      MakeFixedPoint(i, tets);
+      psize -= 1;
+      i--;
+    }
+  }
+
+  for (int i = 0; i < (tets.size()/4); ++i) {
+    AddTet(tets[i*4], tets[i*4+1], tets[i*4 + 2], tets[i*4 + 3]);
+  }
+  //for (int i = 0; i < particles.size(); ++i) {
+  //  CalculateParticleMass(i, 200.0/edges.size());
+  //}
+  CopyIntoStartPos(); 
+  //for (int i = 0; i < particles.size(); ++i) {
+  //  if (particles[i].x[2] < -6)
+  //  particles[i].v[1] += .5;
+  //}
+  
+  for (int i = 0; i < particles.size(); ++i) {
+   // if (particles[i].x[2] >-2)
+   // particles[i].v[1] += -5;
+  }
+  gravity = 9.8;
+  //ground = true;
+  delete[] points;
+}
+
 void ParticleSystem::MakeFixedPoint(int p, std::vector<int>& edges) {
   fixed_points.emplace_back();
   fixed_points[fixed_points.size() - 1].x = particles[p].x;
@@ -455,7 +604,7 @@ void ParticleSystem::ImplicitEulerSparse(double timestep) {
     //  Rot.col(1) = r1;
     //  Rot.col(2) = r2;
     //}
-    {
+    if (corotational) {
       Eigen::Matrix3d mapping1, mapping2;
       mapping1 << p2->x - p1->x, p3->x - p1->x, p4->x - p1->x;
       mapping2 = mapping1 * tets[i].inversePos;
@@ -495,11 +644,16 @@ void ParticleSystem::ImplicitEulerSparse(double timestep) {
                  0, (*j1)[2], (*j1)[1],
                  (*j1)[2], 0, (*j1)[0];
         temp = temp1 * middle1 * temp2 + temp3 * middle2 * temp4;
-        Eigen::Vector3d force = Rot * temp * startPos[tets[i].to[index2]];
-        f_0[tets[i].to[index1] * 3] += force[0];
-        f_0[tets[i].to[index1] * 3 + 1] += force[1];
-        f_0[tets[i].to[index1] * 3 + 2] += force[2];
-        Eigen::Matrix3d kelement = Rot * temp * Rot.transpose();
+        Eigen::Matrix3d kelement;
+        if (corotational) {
+          Eigen::Vector3d force = Rot * temp * startPos[tets[i].to[index2]];
+          f_0[tets[i].to[index1] * 3] += force[0];
+          f_0[tets[i].to[index1] * 3 + 1] += force[1];
+          f_0[tets[i].to[index1] * 3 + 2] += force[2];
+          kelement = Rot * temp * Rot.transpose();
+        } else {
+          kelement = temp;
+        }
         PushbackMatrix3d(iesdfdxtriplet, kelement, tets[i].to[index1] * 3, tets[i].to[index2] * 3, 1);
       } else {}}
     }
@@ -517,9 +671,15 @@ void ParticleSystem::ImplicitEulerSparse(double timestep) {
     v_0[i * 3] = particles[i].v[0];
     v_0[i * 3 + 1] = particles[i].v[1];
     v_0[i * 3 + 2] = particles[i].v[2];
-    x_0[i * 3] = particles[i].x[0];// - startPos[i][0];
-    x_0[i * 3 + 1] = particles[i].x[1];// - startPos[i][1];
-    x_0[i * 3 + 2] = particles[i].x[2];// - startPos[i][2];
+    if (corotational) {
+      x_0[i * 3] = particles[i].x[0];
+      x_0[i * 3 + 1] = particles[i].x[1];
+      x_0[i * 3 + 2] = particles[i].x[2];
+    } else {
+      x_0[i * 3] = particles[i].x[0] - startPos[i][0];
+      x_0[i * 3 + 1] = particles[i].x[1] - startPos[i][1];
+      x_0[i * 3 + 2] = particles[i].x[2] - startPos[i][2];
+    }
     f_ext[i * 3] = 0;
     f_ext[i * 3 + 1] = gravity/particles[i].iMass;
     f_ext[i * 3 + 2] = 0;
@@ -534,11 +694,18 @@ void ParticleSystem::ImplicitEulerSparse(double timestep) {
   iesb = iesA * v_0 + timestep * (iesdfdx * x_0 - f_0 + f_ext);
   iesA = iesA - (timestep * timestep * iesdfdx);
   Eigen::ConjugateGradient<Eigen::SparseMatrix<double> > cg;
-  //cg.setTolerance(.000001);
+  cg.setTolerance(.001);
+
+  double tempTime = glfwGetTime();
+  double curTime = tempTime;
 
   cg.compute(iesA);
   if (hasPrev) newv = cg.solveWithGuess(iesb, vdiffprev);
   else newv = cg.solve(iesb);
+
+  tempTime = glfwGetTime();
+  solveTime += tempTime - curTime;
+  curTime = tempTime;
 
   vdiffprev = newv;
   hasPrev = true;

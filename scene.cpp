@@ -21,7 +21,7 @@ Scene::Scene() {
   xtarg = ytarg = 0;
   ztarg = 0;
   walkForward = walkBack = walkRight = walkLeft = false;
-  displaySurface = true;
+  drawMode = 0;
   slowMode = false;
 }
 
@@ -112,19 +112,30 @@ void PerspectiveMatrix(float fovY, float aspect, float near, float far, Eigen::M
 
 #define PI 3.14159265
 }
-void Scene::DrawScene(ParticleSystem* m, int strainSize, bool drawPoints) {
+void Scene::DrawScene(ParticleSystem* m, double strainSize, bool drawPoints) {
   int pSize;
   int cSize;
   //float* points = m->GetPositions3d(&pSize);
   //float* colors = m->GetColors(&cSize, strainSize);
 
   float *points, *colors;
-  if (displaySurface) {
-    points = m->GetTriangles3d(&pSize);
-    colors = m->GetTriColors(&cSize, strainSize);
-  } else {
-    points = m->GetPositions3d(&pSize);
-    colors = m->GetColors(&cSize, strainSize, xpos, ypos, zpos);
+  switch(drawMode) {
+    case 0:
+      points = m->GetTriangles3d(&pSize);
+      colors = m->GetTriColors(&cSize, strainSize);
+      break;
+    case 1:
+      points = m->GetPositions3d(&pSize);
+      colors = m->GetColors(&cSize, strainSize, xpos, ypos, zpos);
+      break;
+    case 2:
+      points = m->GetTriangles3d(&pSize);
+      colors = m->GetStrainTriColors(&cSize, strainSize);
+      break;
+    case 3:
+      points = m->GetTetCenter(&pSize);
+      colors = m->GetCenterColors(&cSize, strainSize);
+      break;
   }
 
   Eigen::Matrix4f rotationMatrix;
@@ -133,10 +144,8 @@ void Scene::DrawScene(ParticleSystem* m, int strainSize, bool drawPoints) {
   projectionMatrix.setZero();
   Eigen::Vector3f pos, target, up;
   pos << xpos, ypos, zpos;
-  xtarg = points[0];
-  ytarg = points[1];
-  ztarg = points[2];
-  target << points[0], points[1], points[2];
+  m->GetCameraPosAndSize(&xtarg, &ytarg, &ztarg);
+  target << xtarg, ytarg, ztarg;
   up << 0, -1, 0;
   RotationMatrix(pos, target, up, rotationMatrix);
   PerspectiveMatrix((65*PI)/180.0, ((float)DDWIDTH)/DDHEIGHT, .5, 100, projectionMatrix);
@@ -148,10 +157,21 @@ void Scene::DrawScene(ParticleSystem* m, int strainSize, bool drawPoints) {
   Scene::DrawGrid(1);
   if (drawPoints) {
      DrawDelegate::SetLineSize(3);
-     if (displaySurface)
-       DrawDelegate::DrawTriangles(points, pSize, colors, cSize);
-     else
-       DrawDelegate::DrawLines(points, pSize, colors, cSize);
+
+     switch(drawMode) {
+       case 0:
+         DrawDelegate::DrawTriangles(points, pSize, colors, cSize);
+         break;
+       case 1:
+         DrawDelegate::DrawLines(points, pSize, colors, cSize);
+         break;
+       case 2:
+         DrawDelegate::DrawTriangles(points, pSize, colors, cSize);
+         break;
+       case 3:
+         DrawDelegate::DrawPoints(points, pSize, colors, cSize);
+         break;
+     }
   }
   if (frames% 100 == 0) {
      printf("pSize %d\n", pSize);

@@ -151,3 +151,32 @@ void MeshGen::GenerateBar(double*& points, int& psize, std::vector<int>& tets) {
     tets.push_back(out.tetrahedronlist[i] - 1);
   }
 }
+
+void MeshGen::GenerateMesh(double*& points, int& psize, std::vector<int>& tets, char* filename) {
+  tetgenio out, in;
+  int i;
+
+  // All indices start from 0.
+  in.firstnumber = 0;
+  in.load_ply(filename);
+
+  // Tetrahedralize the PLC. Switches are chosen to read a PLC (p),
+  //   do quality mesh generation (q) with a specified quality bound
+  //   (1.414), and apply a maximum volume constraint (a0.1).
+
+  tetrahedralize("pq", &in, &out);
+
+  points = new double[out.numberofpoints*3];
+  for (int i = 0; i < out.numberofpoints*3;++i) {
+    if (i%3 == 2) {
+      points[i] = -1* out.pointlist[i];
+    } else {
+      points[i] = out.pointlist[i];
+    }
+  }
+  psize = out.numberofpoints;
+
+  for (int i = 0; i <out.numberoftetrahedra*4; ++i) {
+    tets.push_back(out.tetrahedronlist[i]);
+  }
+}

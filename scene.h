@@ -14,12 +14,12 @@ class Scene {
   void SetLimitFps(bool enable);
   void ToggleLimitFps();
   double GetFps();
-  void DrawScene(ParticleSystem* m, int strainSize, bool drawPoints);
+  void DrawScene(ParticleSystem* m, double strainSize, bool drawPoints);
   void DrawGrid(int gridSize);
   void Update(double timestep);
 
   bool walkForward, walkBack, walkRight, walkLeft;
-  bool displaySurface;
+  int drawMode;
   bool slowMode;
  private:
   int frames;
@@ -32,8 +32,8 @@ class Scene {
   double timeAhead;
   double prevTime;
   double secondsPerFrame;
-  float xpos, ypos, zpos;
-  float xtarg, ytarg, ztarg;
+  double xpos, ypos, zpos;
+  double xtarg, ytarg, ztarg;
 };
 
 #endif

@@ -212,6 +212,7 @@ bool DrawDelegate::SetupOpenGL() {
   glClearColor(1,1,1,1);
   glColor4f(1.0,1.0,1.0,1.0);
   //glLineWidth(5);
+  glPointSize(10);
   return 1;
 }
 
@@ -262,6 +263,27 @@ void DrawDelegate::DrawLines(float* pos, int npos, float* color, int ncolor) {
   glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(float) * npos, pos);
 
   glDrawArrays(GL_LINES, 0, npos/3);
+  GLenum temp = glGetError();
+  if (temp != GL_NO_ERROR) {
+    fprintf(stderr, "Got gl error: %d\n", temp);
+  }
+}
+
+void DrawDelegate::DrawPoints(float* pos, int npos, float* color, int ncolor) {
+  while(npos > DDbufferSize) {
+   printf("buffer not big enough\n");
+   DDbufferSize *= 2;
+  }
+  while (ncolor > DDcolorbufferSize)
+    DDcolorbufferSize *= 2;
+  glBindBuffer(GL_ARRAY_BUFFER, colorVBO);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(float)*DDcolorbufferSize, NULL, GL_STREAM_DRAW);
+  glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(float) * ncolor, color);
+  glBindBuffer(GL_ARRAY_BUFFER, pointVBO);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(float)*DDbufferSize, NULL, GL_STREAM_DRAW);
+  glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(float) * npos, pos);
+
+  glDrawArrays(GL_POINTS, 0, npos/3);
   GLenum temp = glGetError();
   if (temp != GL_NO_ERROR) {
     fprintf(stderr, "Got gl error: %d\n", temp);
