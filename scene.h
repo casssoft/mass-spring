@@ -19,7 +19,7 @@ class Scene {
   void Update(double timestep);
 
   bool walkForward, walkBack, walkRight, walkLeft;
-  bool displaySurface;
+  int drawMode;
   bool slowMode;
  private:
   int frames;

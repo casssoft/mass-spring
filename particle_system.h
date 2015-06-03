@@ -39,6 +39,7 @@ class ParticleSystem {
   float* GetTriangles3d(int* size);
   void GetCameraPosAndSize(double* x, double* y, double*z);
   float* GetTriColors(int* size, int strainSize);
+  float* GetStrainTriColors(int* size, int strainSize);
   float* GetColors(int* size, int strainSize, float x, float y, float z);
   void SetupSingleSpring();
   void SetupBendingBar();

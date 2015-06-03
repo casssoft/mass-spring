@@ -177,6 +177,50 @@ float* ParticleSystem::GetTriColors(int* size, int strainSize) {
   return colorTemp.data();
 }
 
+float* ParticleSystem::GetStrainTriColors(int* size, int strainSize) {
+  *size = tets.size()* 4 * 3 * 3;
+  int perTet = 4 * 3 * 3;
+  colorTemp.resize(*size);
+  for (int i = 0; i < *size/perTet; i++) {
+    
+    Particle *p1,*p2,*p3,*p4;
+    GetTetP(i, p1, p2, p3, p4);
+
+    Eigen::Matrix3d temp;
+    temp << p2->x - p1->x, p3->x - p1->x, p4->x - p1->x;
+    Eigen::Matrix3d deformGradient = (temp * tets[i].inversePos) - Eigen::Matrix3d::Identity();
+    Eigen::Matrix3d greenStrainTensor = .5 * (deformGradient + deformGradient.transpose() +
+                                              deformGradient.transpose() * deformGradient);
+    double v = .4;
+    Eigen::VectorXd strainVec(6);
+    strainVec << greenStrainTensor(0,0), greenStrainTensor(1,1),
+                                    greenStrainTensor(2,2), greenStrainTensor(1,0),
+                                    greenStrainTensor(1,2), greenStrainTensor(2,0);
+
+    Eigen::MatrixXd strainToStress(6,6);
+    strainToStress << 1 - v, v, v, 0, 0, 0,
+                                           v, 1 - v, v, 0, 0, 0,
+                                           v, v, 1 - v, 0, 0, 0,
+                                           0, 0, 0, 1 - 2*v, 0, 0,
+                                           0, 0, 0, 0, 1 - 2*v, 0,
+                                           0, 0, 0, 0, 0, 1 - 2*v;
+    Eigen::VectorXd stressVec(6);
+    stressVec = (tets[i].k/((1 + v) * (1 - 2*v))) * strainToStress * strainVec;
+    Eigen::Matrix3d stressTensor;
+    stressTensor << stressVec[0], stressVec[3], stressVec[5],
+                    stressVec[3], stressVec[1], stressVec[4],
+                    stressVec[5], stressVec[4], stressVec[2];
+    double strain = stressTensor.norm();
+   
+    int c = 0;
+    while(c < perTet) {
+      LerpColors(strain, &(colorTemp[i*perTet+c]));
+      c += 3;
+    }
+  }
+  return colorTemp.data();
+}
+
 float* ParticleSystem::GetTriangles3d(int* size) {
   *size = tets.size()* 4 * 3 * 3;
   int perTet = 4 * 3 * 3;
@@ -455,14 +499,14 @@ void ParticleSystem::ImplicitEulerSparse(double timestep) {
     //  Rot.col(1) = r1;
     //  Rot.col(2) = r2;
     //}
-    {
-      Eigen::Matrix3d mapping1, mapping2;
-      mapping1 << p2->x - p1->x, p3->x - p1->x, p4->x - p1->x;
-      mapping2 = mapping1 * tets[i].inversePos;
-      Eigen::Affine3d trans1;
-      trans1 = mapping2;
-      Rot = trans1.rotation();
-    }
+    //{
+    //  Eigen::Matrix3d mapping1, mapping2;
+    //  mapping1 << p2->x - p1->x, p3->x - p1->x, p4->x - p1->x;
+    //  mapping2 = mapping1 * tets[i].inversePos;
+    //  Eigen::Affine3d trans1;
+    //  trans1 = mapping2;
+    //  Rot = trans1.rotation();
+    //}
     // for all combos
     for (int index1 = 0; index1 < 4; ++index1) {
       if (tets[i].to[index1] < 0) continue;
@@ -495,11 +539,11 @@ void ParticleSystem::ImplicitEulerSparse(double timestep) {
                  0, (*j1)[2], (*j1)[1],
                  (*j1)[2], 0, (*j1)[0];
         temp = temp1 * middle1 * temp2 + temp3 * middle2 * temp4;
-        Eigen::Vector3d force = Rot * temp * startPos[tets[i].to[index2]];
-        f_0[tets[i].to[index1] * 3] += force[0];
-        f_0[tets[i].to[index1] * 3 + 1] += force[1];
-        f_0[tets[i].to[index1] * 3 + 2] += force[2];
-        Eigen::Matrix3d kelement = Rot * temp * Rot.transpose();
+        //Eigen::Vector3d force = Rot * temp * startPos[tets[i].to[index2]];
+        //f_0[tets[i].to[index1] * 3] += force[0];
+        //f_0[tets[i].to[index1] * 3 + 1] += force[1];
+        //f_0[tets[i].to[index1] * 3 + 2] += force[2];
+        Eigen::Matrix3d kelement = temp;//Rot * temp * Rot.transpose();
         PushbackMatrix3d(iesdfdxtriplet, kelement, tets[i].to[index1] * 3, tets[i].to[index2] * 3, 1);
       } else {}}
     }
@@ -517,9 +561,9 @@ void ParticleSystem::ImplicitEulerSparse(double timestep) {
     v_0[i * 3] = particles[i].v[0];
     v_0[i * 3 + 1] = particles[i].v[1];
     v_0[i * 3 + 2] = particles[i].v[2];
-    x_0[i * 3] = particles[i].x[0];// - startPos[i][0];
-    x_0[i * 3 + 1] = particles[i].x[1];// - startPos[i][1];
-    x_0[i * 3 + 2] = particles[i].x[2];// - startPos[i][2];
+    x_0[i * 3] = particles[i].x[0] - startPos[i][0];
+    x_0[i * 3 + 1] = particles[i].x[1] - startPos[i][1];
+    x_0[i * 3 + 2] = particles[i].x[2] - startPos[i][2];
     f_ext[i * 3] = 0;
     f_ext[i * 3 + 1] = gravity/particles[i].iMass;
     f_ext[i * 3 + 2] = 0;

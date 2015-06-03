@@ -75,8 +75,9 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
         if (solveWithguess) solveWithguess = false;
         else solveWithguess = true;
         printf("Solvewith guess: %d\n", (int) solveWithguess);
+        break;
       case 'Z':
-        scene_p->displaySurface = scene_p->displaySurface ? false : true;
+        scene_p->drawMode = (scene_p->drawMode + 1)%3;
         break;
       case 'X':
         scene_p->slowMode = scene_p->slowMode ? false : true;
