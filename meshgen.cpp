@@ -152,7 +152,7 @@ void MeshGen::GenerateBar(double*& points, int& psize, std::vector<int>& tets) {
   }
 }
 
-void MeshGen::GenerateMesh(double*& points, int& psize, std::vector<int>& tets, char* filename) {
+void MeshGen::GenerateMesh(double*& points, int& psize, std::vector<int>& tets, std::vector<int>& faces, char* filename) {
   tetgenio out, in;
   int i;
 
@@ -178,5 +178,8 @@ void MeshGen::GenerateMesh(double*& points, int& psize, std::vector<int>& tets, 
 
   for (int i = 0; i <out.numberoftetrahedra*4; ++i) {
     tets.push_back(out.tetrahedronlist[i]);
+  }
+  for (int i = 0; i < out.numberoftrifaces*3; ++i) {
+    faces.push_back(out.trifacelist[i]);
   }
 }

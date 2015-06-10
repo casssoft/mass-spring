@@ -133,8 +133,9 @@ int main(int argc, char **argv) {
     }
   }
 
+  m.SetupArmadillo();
   //m.SetupSingleSpring();
-  m.SetupBendingBar();
+  //m.SetupBendingBar();
   //m.SetupTriangle();
   //m.SetupMouseSpring(5);
 
@@ -144,6 +145,7 @@ int main(int argc, char **argv) {
 
   double curTime;
   double simulatetime = 0;
+  double drawtime = 0;
   int frames = 0;
   glfwSetKeyCallback(window, key_callback);
   while (!glfwWindowShouldClose(window)) {
@@ -172,6 +174,10 @@ int main(int argc, char **argv) {
 
     m.Update(timestep, solveWithguess, corotational);
 
+    double tempTime = glfwGetTime();
+    simulatetime += tempTime - curTime;
+    curTime = tempTime;
+
 
     // Update scene pos
     scene.Update(timestep);
@@ -179,8 +185,8 @@ int main(int argc, char **argv) {
     // Draw
     scene.DrawScene(&m, strainSize, drawSimulation);
 
-    double tempTime = glfwGetTime();
-    simulatetime += tempTime - curTime;
+    tempTime = glfwGetTime();
+    drawtime += tempTime - curTime;
     curTime = tempTime;
 
     glfwSwapBuffers(window);
@@ -191,6 +197,7 @@ int main(int argc, char **argv) {
   }
 
   printf("Simulate time %f\n", simulatetime/frames);
+  printf("Draw time %f\n", drawtime/frames);
   printf("Frames %d\n", frames);
   double triplet, fromtriplet, solve;
   m.GetProfileInfo(triplet, fromtriplet, solve);

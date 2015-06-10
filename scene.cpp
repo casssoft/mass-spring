@@ -21,7 +21,7 @@ Scene::Scene() {
   xtarg = ytarg = 0;
   ztarg = 0;
   walkForward = walkBack = walkRight = walkLeft = false;
-  drawMode = 0;
+  drawMode = 3;
   slowMode = false;
 }
 

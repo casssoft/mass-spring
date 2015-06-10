@@ -4,7 +4,7 @@
 #include <vector>
 namespace MeshGen {
   void GenerateBar(double*& points, int& psize, std::vector<int>& edges);
-  void GenerateMesh(double*& points, int& psize, std::vector<int>& edges, char*filename);
+  void GenerateMesh(double*& points, int& psize, std::vector<int>& edges, std::vector<int>& faces, char*filename);
 };
 
 #endif

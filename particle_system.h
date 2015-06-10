@@ -67,6 +67,7 @@ class ParticleSystem {
   std::vector<float> posTemp;
   std::vector<float> colorTemp;
   std::vector<double> phaseTemp;
+  std::vector<int> faces;
   double stiffness;
   double dampness;
   double gravity;
