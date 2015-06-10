@@ -36,18 +36,21 @@ class ParticleSystem {
   ParticleSystem();
   void Update(double timestep, bool solveWithguess, bool corotational);
   float* GetPositions3d(int* size);
-  float* GetTriangles3d(int* size);
+  float* GetSurfaceTriangles3d(int* size);
+  float* GetAllTriangles3d(int* size);
   float* GetTetCenter(int*size);
 
   void GetCameraPosAndSize(double* x, double* y, double*z);
   float* GetTriColors(int* size, double strainSize);
-  float* GetStrainTriColors(int* size, double strainSize);
+  float* GetStrainSurfaceTriColors(int* size, double strainSize);
+  float* GetStrainAllTriColors(int* size, double strainSize);
   float* GetColors(int* size, double strainSize, float x, float y, float z);
   float* GetCenterColors(int*size, double strainSize);
 
   void SetupSingleSpring();
   void SetupBendingBar();
   void SetupArmadillo();
+  void SetupMeshFile(char*filename);
   void Reset();
   void SetSpringProperties(double k, double c);
 
@@ -57,7 +60,7 @@ class ParticleSystem {
   std::vector<Particle> particles;
   std::vector<Particle> fixed_points;
  private:
-  void MakeFixedPoint(int i, std::vector<int>& edges);
+  void MakeFixedPoint(int i, std::vector<int>& edges, std::vector<int>& faces);
   void ComputeForces();
   void ExplicitEuler(double timestep);
   void ImplicitEulerSparse(double timestep);
@@ -68,6 +71,7 @@ class ParticleSystem {
   std::vector<float> colorTemp;
   std::vector<double> phaseTemp;
   std::vector<int> faces;
+  std::vector<int> facetotet;
   double stiffness;
   double dampness;
   double gravity;

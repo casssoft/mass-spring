@@ -196,9 +196,9 @@ float* ParticleSystem::GetPositions3d(int* size) {
 }
 
 float* ParticleSystem::GetTriColors(int* size, double strainSize) {
-  *size = tets.size()* 4 * 3 * 3;
-  int perTri = 3 * 3;
+  *size = faces.size()*3;
   colorTemp.resize(*size);
+  int perTri = 9;
   Eigen::Vector3d light1,light2;
   light1 << 1, 1, -1;
   light1.normalize();
@@ -233,11 +233,10 @@ float* ParticleSystem::GetTriColors(int* size, double strainSize) {
   return colorTemp.data();
 }
 
-float* ParticleSystem::GetStrainTriColors(int* size, double strainSize) {
-  *size = tets.size()* 4 * 3 * 3;
-  int perTet = 4 * 3 * 3;
+float* ParticleSystem::GetStrainSurfaceTriColors(int* size, double strainSize) {
+  *size = faces.size()*3;
   colorTemp.resize(*size);
-  for (int i = 0; i < *size/perTet; i++) {
+  for (int i = 0; i < tets.size(); i++) {
     Particle *p1,*p2,*p3,*p4;
     GetTetP(i, p1, p2, p3, p4);
 
@@ -271,17 +270,18 @@ float* ParticleSystem::GetStrainTriColors(int* size, double strainSize) {
                     stressVec[3], stressVec[1], stressVec[4],
                     stressVec[5], stressVec[4], stressVec[2];
     double strain = stressTensor.norm();
-   
-    int c = 0;
-    while(c < perTet) {
-      LerpColors(strain * strainSize, &(colorTemp[i*perTet+c]));
-      c += 3;
-    }
+    tets[i].strain = strain;
+  }
+  for (int i = 0; i < faces.size()/3; i++) {
+    double strain = tets[facetotet[i]].strain;
+    LerpColors(strain * strainSize, &(colorTemp[i*9]));
+    LerpColors(strain * strainSize, &(colorTemp[i*9+3]));
+    LerpColors(strain * strainSize, &(colorTemp[i*9+6]));
   }
   return colorTemp.data();
 }
 
-float* ParticleSystem::GetTriangles3d(int* size) {
+float* ParticleSystem::GetSurfaceTriangles3d(int* size) {
   *size = faces.size()*3;
   posTemp.resize(*size);
   for (int i = 0; i < faces.size(); i++) {
@@ -291,66 +291,121 @@ float* ParticleSystem::GetTriangles3d(int* size) {
     posTemp[i*3+1] = p1->x[1];
     posTemp[i*3+2] = p1->x[2];
  }
-  //*size = tets.size()* 4 * 3 * 3;
-  //int perTet = 4 * 3 * 3;
-  //posTemp.resize(*size);
-  //for (int i = 0; i < tets.size(); i++) {
-  //  Particle *p1, *p2, *p3, *p4;
-  //  GetTetP(i, p1, p2, p3, p4);
-  //  int c = 0;
-  //  // p1 p2 p3
-  //  posTemp[i*perTet + c++] = ((float)p1->x[0]);
-  //  posTemp[i*perTet + c++] = ((float)p1->x[1]);
-  //  posTemp[i*perTet + c++] = ((float)p1->x[2]);
+ return posTemp.data();
+}
 
-  //  posTemp[i*perTet + c++] = ((float)p2->x[0]);
-  //  posTemp[i*perTet + c++] = ((float)p2->x[1]);
-  //  posTemp[i*perTet + c++] = ((float)p2->x[2]);
+float* ParticleSystem::GetAllTriangles3d(int* size) {
+  *size = tets.size()* 4 * 3 * 3;
+  int perTet = 4 * 3 * 3;
+  posTemp.resize(*size);
+  for (int i = 0; i < tets.size(); i++) {
+    Particle *p1, *p2, *p3, *p4;
+    GetTetP(i, p1, p2, p3, p4);
+    int c = 0;
+    // p1 p2 p3
+    posTemp[i*perTet + c++] = ((float)p1->x[0]);
+    posTemp[i*perTet + c++] = ((float)p1->x[1]);
+    posTemp[i*perTet + c++] = ((float)p1->x[2]);
 
-  //  posTemp[i*perTet + c++] = ((float)p3->x[0]);
-  //  posTemp[i*perTet + c++] = ((float)p3->x[1]);
-  //  posTemp[i*perTet + c++] = ((float)p3->x[2]);
+    posTemp[i*perTet + c++] = ((float)p2->x[0]);
+    posTemp[i*perTet + c++] = ((float)p2->x[1]);
+    posTemp[i*perTet + c++] = ((float)p2->x[2]);
 
-  //  // p1 p4 p2
-  //  posTemp[i*perTet + c++] = ((float)p1->x[0]);
-  //  posTemp[i*perTet + c++] = ((float)p1->x[1]);
-  //  posTemp[i*perTet + c++] = ((float)p1->x[2]);
+    posTemp[i*perTet + c++] = ((float)p3->x[0]);
+    posTemp[i*perTet + c++] = ((float)p3->x[1]);
+    posTemp[i*perTet + c++] = ((float)p3->x[2]);
 
-  //  posTemp[i*perTet + c++] = ((float)p4->x[0]);
-  //  posTemp[i*perTet + c++] = ((float)p4->x[1]);
-  //  posTemp[i*perTet + c++] = ((float)p4->x[2]);
+    // p1 p4 p2
+    posTemp[i*perTet + c++] = ((float)p1->x[0]);
+    posTemp[i*perTet + c++] = ((float)p1->x[1]);
+    posTemp[i*perTet + c++] = ((float)p1->x[2]);
 
-  //  posTemp[i*perTet + c++] = ((float)p2->x[0]);
-  //  posTemp[i*perTet + c++] = ((float)p2->x[1]);
-  //  posTemp[i*perTet + c++] = ((float)p2->x[2]);
+    posTemp[i*perTet + c++] = ((float)p4->x[0]);
+    posTemp[i*perTet + c++] = ((float)p4->x[1]);
+    posTemp[i*perTet + c++] = ((float)p4->x[2]);
 
-  //  // p1 p3 p4
-  //  posTemp[i*perTet + c++] = ((float)p1->x[0]);
-  //  posTemp[i*perTet + c++] = ((float)p1->x[1]);
-  //  posTemp[i*perTet + c++] = ((float)p1->x[2]);
+    posTemp[i*perTet + c++] = ((float)p2->x[0]);
+    posTemp[i*perTet + c++] = ((float)p2->x[1]);
+    posTemp[i*perTet + c++] = ((float)p2->x[2]);
 
-  //  posTemp[i*perTet + c++] = ((float)p3->x[0]);
-  //  posTemp[i*perTet + c++] = ((float)p3->x[1]);
-  //  posTemp[i*perTet + c++] = ((float)p3->x[2]);
+    // p1 p3 p4
+    posTemp[i*perTet + c++] = ((float)p1->x[0]);
+    posTemp[i*perTet + c++] = ((float)p1->x[1]);
+    posTemp[i*perTet + c++] = ((float)p1->x[2]);
 
-  //  posTemp[i*perTet + c++] = ((float)p4->x[0]);
-  //  posTemp[i*perTet + c++] = ((float)p4->x[1]);
-  //  posTemp[i*perTet + c++] = ((float)p4->x[2]);
+    posTemp[i*perTet + c++] = ((float)p3->x[0]);
+    posTemp[i*perTet + c++] = ((float)p3->x[1]);
+    posTemp[i*perTet + c++] = ((float)p3->x[2]);
 
-  //  // p3 p2 p4
-  //  posTemp[i*perTet + c++] = ((float)p3->x[0]);
-  //  posTemp[i*perTet + c++] = ((float)p3->x[1]);
-  //  posTemp[i*perTet + c++] = ((float)p3->x[2]);
+    posTemp[i*perTet + c++] = ((float)p4->x[0]);
+    posTemp[i*perTet + c++] = ((float)p4->x[1]);
+    posTemp[i*perTet + c++] = ((float)p4->x[2]);
 
-  //  posTemp[i*perTet + c++] = ((float)p2->x[0]);
-  //  posTemp[i*perTet + c++] = ((float)p2->x[1]);
-  //  posTemp[i*perTet + c++] = ((float)p2->x[2]);
+    // p3 p2 p4
+    posTemp[i*perTet + c++] = ((float)p3->x[0]);
+    posTemp[i*perTet + c++] = ((float)p3->x[1]);
+    posTemp[i*perTet + c++] = ((float)p3->x[2]);
 
-  //  posTemp[i*perTet + c++] = ((float)p4->x[0]);
-  //  posTemp[i*perTet + c++] = ((float)p4->x[1]);
-  //  posTemp[i*perTet + c++] = ((float)p4->x[2]);
-  //}
+    posTemp[i*perTet + c++] = ((float)p2->x[0]);
+    posTemp[i*perTet + c++] = ((float)p2->x[1]);
+    posTemp[i*perTet + c++] = ((float)p2->x[2]);
+
+    posTemp[i*perTet + c++] = ((float)p4->x[0]);
+    posTemp[i*perTet + c++] = ((float)p4->x[1]);
+    posTemp[i*perTet + c++] = ((float)p4->x[2]);
+  }
   return posTemp.data();
+}
+
+float* ParticleSystem::GetStrainAllTriColors(int* size, double strainSize) {
+  *size = tets.size()* 4 * 3 * 3;
+  int perTet = 4 * 3 * 3;
+  colorTemp.resize(*size);
+  for (int i = 0; i < tets.size(); i++) {
+    Particle *p1,*p2,*p3,*p4;
+    GetTetP(i, p1, p2, p3, p4);
+
+    Eigen::Matrix3d temp;
+    temp << p2->x - p1->x, p3->x - p1->x, p4->x - p1->x;
+    Eigen::Matrix3d deformGradient = (temp * tets[i].inversePos) - Eigen::Matrix3d::Identity();
+    Eigen::Matrix3d greenStrainTensor;
+    if (corotational) {
+      greenStrainTensor = .5 * (deformGradient + deformGradient.transpose() +
+                                                deformGradient.transpose() * deformGradient);
+    } else {
+      greenStrainTensor = .5 * (deformGradient + deformGradient.transpose());
+    }
+    double v = .4;
+    Eigen::VectorXd strainVec(6);
+    strainVec << greenStrainTensor(0,0), greenStrainTensor(1,1),
+                                    greenStrainTensor(2,2), greenStrainTensor(1,0),
+                                    greenStrainTensor(1,2), greenStrainTensor(2,0);
+
+    Eigen::MatrixXd strainToStress(6,6);
+    strainToStress << 1 - v, v, v, 0, 0, 0,
+                                           v, 1 - v, v, 0, 0, 0,
+                                           v, v, 1 - v, 0, 0, 0,
+                                           0, 0, 0, 1 - 2*v, 0, 0,
+                                           0, 0, 0, 0, 1 - 2*v, 0,
+                                           0, 0, 0, 0, 0, 1 - 2*v;
+    Eigen::VectorXd stressVec(6);
+    stressVec = (tets[i].k/((1 + v) * (1 - 2*v))) * strainToStress * strainVec;
+    Eigen::Matrix3d stressTensor;
+    stressTensor << stressVec[0], stressVec[3], stressVec[5],
+                    stressVec[3], stressVec[1], stressVec[4],
+                    stressVec[5], stressVec[4], stressVec[2];
+    double strain = stressTensor.norm();
+    tets[i].strain = strain;
+  }
+  for (int i = 0; i < tets.size(); i++) {
+    double strain = tets[i].strain;
+    int c = 0;
+    while(c < perTet) {
+      LerpColors(strain * strainSize, &(colorTemp[i*perTet+c]));
+      c += 3;
+    }
+  }
+  return colorTemp.data();
 }
 
 void ParticleSystem::GetCameraPosAndSize(double* x, double*y, double* z) {
@@ -415,7 +470,7 @@ void ParticleSystem::SetupBendingBar() {
   int psize;
   double* points;
   std::vector<int> tets;
-  MeshGen::GenerateBar(points, psize, tets);
+  MeshGen::GenerateBar(points, psize, tets, faces, facetotet);
 
   printf("Psize: %d, esize %d\n",psize, tets.size());
 
@@ -428,7 +483,7 @@ void ParticleSystem::SetupBendingBar() {
   for (int i = 0; i < psize; ++i) {
     if (particles[i].x[2] == 0) {
       printf("fixed_point!\n");
-      MakeFixedPoint(i, tets);
+      MakeFixedPoint(i, tets, faces);
       psize -= 1;
       i--;
     }
@@ -460,8 +515,7 @@ void ParticleSystem::SetupArmadillo() {
   int psize;
   double* points;
   std::vector<int> tets;
-  faces.clear();
-  MeshGen::GenerateMesh(points, psize, tets, faces, "Armadillo_simple2.ply");
+  MeshGen::GenerateMesh(points, psize, tets, faces, facetotet, "Armadillo_simple2.ply");
 
   printf("Psize: %d, esize %d\n",psize, tets.size());
 
@@ -471,14 +525,14 @@ void ParticleSystem::SetupArmadillo() {
     particles[i].v << 0, 0, 0;
     particles[i].iMass = psize/20.0;
   }
-  //for (int i = 0; i < psize; ++i) {
-  //  if (particles[i].x[1] < -6 && particles[i].x[0] < 2) {
-  //    printf("fixed_point!\n");
-  //    MakeFixedPoint(i, tets);
-  //    psize -= 1;
-  //    i--;
-  //  }
-  //}
+  for (int i = 0; i < psize; ++i) {
+    if (particles[i].x[1] < -6 && particles[i].x[0] < 2) {
+      printf("fixed_point!\n");
+      MakeFixedPoint(i, tets, faces);
+      psize -= 1;
+      i--;
+    }
+  }
 
   for (int i = 0; i < (tets.size()/4); ++i) {
     AddTet(tets[i*4], tets[i*4+1], tets[i*4 + 2], tets[i*4 + 3]);
@@ -497,12 +551,52 @@ void ParticleSystem::SetupArmadillo() {
    // particles[i].v[1] += -5;
   }
   gravity = 9.8;
-  ground = true;
+  //ground = true;
   delete[] points;
   printf("Number of faces%d\n", faces.size()/3);
 }
 
-void ParticleSystem::MakeFixedPoint(int p, std::vector<int>& edges) {
+void ParticleSystem::SetupMeshFile(char* filename) {
+  Reset();
+  int psize;
+  double* points;
+  std::vector<int> tets;
+  MeshGen::GenerateMesh(points, psize, tets, faces, facetotet, filename);
+
+  printf("Psize: %d, Number of tets %d\n",psize, tets.size());
+
+  double lowestpoint = -10;
+  for (int i = 0; i < psize; ++i) {
+    particles.emplace_back();
+    particles[i].x << points[i*3], points[i*3 + 1], points[i*3 + 2];
+    particles[i].v << 0, 0, 0;
+    particles[i].iMass = psize/20.0;
+    if (points[i*3 + 1] > lowestpoint) {
+      lowestpoint = points[i*3+1];
+    }
+  }
+
+  //Make lowest points fixed
+  for (int i = 0; i < psize; ++i) {
+    if (particles[i].x[1] > lowestpoint - .1) {
+      printf("fixed_point!\n");
+      MakeFixedPoint(i, tets, faces);
+      psize -= 1;
+      i--;
+    }
+  }
+
+  for (int i = 0; i < (tets.size()/4); ++i) {
+    AddTet(tets[i*4], tets[i*4+1], tets[i*4 + 2], tets[i*4 + 3]);
+  }
+  CopyIntoStartPos(); 
+  gravity = 9.8;
+  ground = false;
+  delete[] points;
+  printf("Number of faces%d\n", faces.size()/3);
+}
+
+void ParticleSystem::MakeFixedPoint(int p, std::vector<int>& edges, std::vector<int>& faces) {
   fixed_points.emplace_back();
   fixed_points[fixed_points.size() - 1].x = particles[p].x;
   for (int i = 0; i < edges.size(); ++i) {
@@ -510,6 +604,13 @@ void ParticleSystem::MakeFixedPoint(int p, std::vector<int>& edges) {
       edges[i] = -1*fixed_points.size();
     } else if (edges[i] > p) {
       edges[i] -= 1;
+    }
+  }
+  for (int i = 0; i < faces.size(); ++i) {
+    if (faces[i] == p) {
+      faces[i] = -1*fixed_points.size();
+    } else if (faces[i] > p) {
+      faces[i] -= 1;
     }
   }
   particles.erase(particles.begin() + p);
@@ -837,8 +938,8 @@ void ParticleSystem::ImplicitEulerSparse(double timestep) {
   iesb = iesA * v_0 + timestep * (iesdfdx * x_0 + f_ext);
   iesA = iesA - (timestep * timestep * iesdfdx);
   Eigen::ConjugateGradient<Eigen::SparseMatrix<double> > cg;
-  cg.setTolerance(.000001);
-  cg.setMaxIterations(50);
+  cg.setTolerance(.001);
+  cg.setMaxIterations(30);
 
   double tempTime = glfwGetTime();
   double curTime = tempTime;
@@ -1022,4 +1123,6 @@ void ParticleSystem::Reset() {
   fixed_points.clear();
   tets.clear();
   hasPrev = false;
+  faces.clear();
+  facetotet.clear();
 }

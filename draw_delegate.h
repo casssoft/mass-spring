@@ -1,8 +1,8 @@
 #ifndef DRAW_DELEGATE_H_
 #define DRAW_DELEGATE_H_
 
-#define DDWIDTH 800
-#define DDHEIGHT 600
+#define DDWIDTH 1500
+#define DDHEIGHT 1000
 
 
 namespace DrawDelegate {

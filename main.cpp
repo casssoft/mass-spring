@@ -76,8 +76,14 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
       case 'L':
         scene_p->walkRight = true;
         break;
+      case 'U':
+        scene_p->walkUp = true;
+        break;
+      case 'O':
+        scene_p->walkDown = true;
+        break;
       case 'Z':
-        scene_p->drawMode = (scene_p->drawMode + 1)%4;
+        scene_p->drawMode = (scene_p->drawMode + 1)%5;
         break;
       case 'X':
         scene_p->slowMode = scene_p->slowMode ? false : true;
@@ -99,6 +105,12 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
         break;
       case 'L':
         scene_p->walkRight = false;
+        break;
+      case 'U':
+        scene_p->walkUp = false;
+        break;
+      case 'O':
+        scene_p->walkDown = false;
         break;
     }
   }
@@ -123,13 +135,17 @@ int main(int argc, char **argv) {
   glfwSwapInterval(0);
   DrawDelegate::SetupOpenGL();
 
+  char*meshFilename = "Armadillo_simple2.ply";
   // Particle system setup
   ParticleSystem m;
   double strainSize = 10;
   if (argc >= 3) {
     m.SetSpringProperties(atof(argv[1]), atof(argv[2]));
-    if (argc == 4) {
+    if (argc >= 4) {
       strainSize = atof(argv[3]);
+    }
+    if (argc >= 5) {
+      meshFilename = argv[4];
     }
   }
 
@@ -164,7 +180,7 @@ int main(int argc, char **argv) {
         m.SetupBendingBar();
         break;
       case 4:
-        //m.SetupTriforce();
+        m.SetupMeshFile(meshFilename);
         break;
     }
     changeSetup = 0;

@@ -29,5 +29,5 @@ particle_system.o : particle_system.cpp particle_system.h draw_delegate.h meshge
 meshgen.o : meshgen.cpp meshgen.h
 	$(CC) meshgen.cpp $(CFLAGS) -o $@
 
-scene.o : scene.cpp scene.h draw_delegate.h
+scene.o : scene.cpp scene.h draw_delegate.h particle_system.h
 	$(CC) scene.cpp $(CFLAGS) -o $@

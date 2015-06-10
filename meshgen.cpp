@@ -4,13 +4,12 @@
 #include "Eigen/Sparse"
 #include <vector>
 
-void MeshGen::GenerateBar(double*& points, int& psize, std::vector<int>& tets) {
+void MeshGen::GenerateBar(double*& points, int& psize, std::vector<int>& tets, std::vector<int>& faces, std::vector<int>& facetotet) {
   tetgenio in, out;
   tetgenio::facet *f;
   tetgenio::polygon *p;
   int i;
 
-  // All indices start from 1.
   in.firstnumber = 1;
 
   in.numberofpoints = 8;
@@ -135,7 +134,7 @@ void MeshGen::GenerateBar(double*& points, int& psize, std::vector<int>& tets) {
   //   do quality mesh generation (q) with a specified quality bound
   //   (1.414), and apply a maximum volume constraint (a0.1).
 
-  tetrahedralize("pq1.414a.5", &in, &out);
+  tetrahedralize("pnnq1.414a.5", &in, &out);
 
   points = new double[out.numberofpoints*3];
   for (int i = 0; i < out.numberofpoints*3;++i) {
@@ -150,9 +149,24 @@ void MeshGen::GenerateBar(double*& points, int& psize, std::vector<int>& tets) {
   for (int i = 0; i <out.numberoftetrahedra*4; ++i) {
     tets.push_back(out.tetrahedronlist[i] - 1);
   }
+  for (int i = 0; i < out.numberoftrifaces*3; ++i) {
+    faces.push_back(out.trifacelist[i] - 1);
+  }
+  for (int i = 0; i < out.numberoftrifaces; ++i) {
+    if (out.adjtetlist[i*2] - 1< 0 || out.adjtetlist[i*2] - 1 >= out.numberoftetrahedra) {
+      if (out.adjtetlist[i*2+1] - 1< 0 || out.adjtetlist[i*2+1] - 1 >= out.numberoftetrahedra) {
+        printf("No adj tet for this face %d\n", i);
+        facetotet.push_back(0);
+      } else {
+        facetotet.push_back(out.adjtetlist[i*2+1] - 1);
+      }
+    } else {
+      facetotet.push_back(out.adjtetlist[i*2] - 1);
+    }
+  }
 }
 
-void MeshGen::GenerateMesh(double*& points, int& psize, std::vector<int>& tets, std::vector<int>& faces, char* filename) {
+void MeshGen::GenerateMesh(double*& points, int& psize, std::vector<int>& tets, std::vector<int>& faces, std::vector<int>& facetotet, char* filename) {
   tetgenio out, in;
   int i;
 
@@ -164,7 +178,7 @@ void MeshGen::GenerateMesh(double*& points, int& psize, std::vector<int>& tets, 
   //   do quality mesh generation (q) with a specified quality bound
   //   (1.414), and apply a maximum volume constraint (a0.1).
 
-  tetrahedralize("pq", &in, &out);
+  tetrahedralize("pnnqa.5", &in, &out);
 
   points = new double[out.numberofpoints*3];
   for (int i = 0; i < out.numberofpoints*3;++i) {
@@ -181,5 +195,16 @@ void MeshGen::GenerateMesh(double*& points, int& psize, std::vector<int>& tets, 
   }
   for (int i = 0; i < out.numberoftrifaces*3; ++i) {
     faces.push_back(out.trifacelist[i]);
+  }
+  for (int i = 0; i < out.numberoftrifaces; ++i) {
+    if (out.adjtetlist[i*2] < 0 || out.adjtetlist[i*2] >= out.numberoftetrahedra) {
+      if (out.adjtetlist[i*2+1] < 0 || out.adjtetlist[i*2+1] >= out.numberoftetrahedra) {
+        facetotet.push_back(0);
+      } else {
+        facetotet.push_back(out.adjtetlist[i*2+1]);
+      }
+    } else {
+      facetotet.push_back(out.adjtetlist[i*2]);
+    }
   }
 }

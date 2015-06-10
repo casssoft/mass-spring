@@ -18,7 +18,7 @@ class Scene {
   void DrawGrid(int gridSize);
   void Update(double timestep);
 
-  bool walkForward, walkBack, walkRight, walkLeft;
+  bool walkForward, walkBack, walkRight, walkLeft, walkUp, walkDown;
   int drawMode;
   bool slowMode;
  private:

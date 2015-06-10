@@ -20,8 +20,8 @@ Scene::Scene() {
   zpos = -20;
   xtarg = ytarg = 0;
   ztarg = 0;
-  walkForward = walkBack = walkRight = walkLeft = false;
-  drawMode = 3;
+  walkUp = walkDown = walkForward = walkBack = walkRight = walkLeft = false;
+  drawMode = 0;
   slowMode = false;
 }
 
@@ -121,7 +121,7 @@ void Scene::DrawScene(ParticleSystem* m, double strainSize, bool drawPoints) {
   float *points, *colors;
   switch(drawMode) {
     case 0:
-      points = m->GetTriangles3d(&pSize);
+      points = m->GetSurfaceTriangles3d(&pSize);
       colors = m->GetTriColors(&cSize, strainSize);
       break;
     case 1:
@@ -129,12 +129,16 @@ void Scene::DrawScene(ParticleSystem* m, double strainSize, bool drawPoints) {
       colors = m->GetColors(&cSize, strainSize, xpos, ypos, zpos);
       break;
     case 2:
-      points = m->GetTriangles3d(&pSize);
-      colors = m->GetStrainTriColors(&cSize, strainSize);
+      points = m->GetSurfaceTriangles3d(&pSize);
+      colors = m->GetStrainSurfaceTriColors(&cSize, strainSize);
       break;
     case 3:
       points = m->GetTetCenter(&pSize);
       colors = m->GetCenterColors(&cSize, strainSize);
+      break;
+    case 4:
+      points = m->GetAllTriangles3d(&pSize);
+      colors = m->GetStrainAllTriColors(&cSize, strainSize);
       break;
   }
 
@@ -171,6 +175,9 @@ void Scene::DrawScene(ParticleSystem* m, double strainSize, bool drawPoints) {
        case 3:
          DrawDelegate::DrawPoints(points, pSize, colors, cSize);
          break;
+       case 4:
+         DrawDelegate::DrawTriangles(points, pSize, colors, cSize);
+         break;
      }
   }
   if (frames% 100 == 0) {
@@ -186,6 +193,8 @@ void Scene::Update(double timestep) {
   targ.normalize();
   up << 0, -1, 0;
   walkvector << 0, 0, 0;
+  if (walkUp) walkvector += up;
+  if (walkDown) walkvector -= up;
   if (walkForward) walkvector += targ;
   if (walkBack) walkvector -= targ;
   if (walkLeft) walkvector += up.cross(targ);
