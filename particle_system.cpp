@@ -15,10 +15,13 @@ ParticleSystem::ParticleSystem() {
 }
 
 void ParticleSystem::Update(double timestep, bool solveWithguess, bool coro) {
+  // Always solveWithguess
+  // coro means whether to use corotational linear FEM or normal linear FEM
   corotational = coro;
   ImplicitEulerSparse(timestep);
   //ExplicitEuler(timestep);
 
+  // Optionally make things bounce of the ground
   if (ground) {
     for (int i = 0; i < particles.size(); i++) {
       if (particles[i].x[1] > 5) {
@@ -36,6 +39,7 @@ void ParticleSystem::Update(double timestep, bool solveWithguess, bool coro) {
   }
 }
 
+// Help function to show strain properly through color
 static void LerpColors(double strain, float*color3) {
    if (strain < 1) {
       *(color3) = 0;
@@ -52,6 +56,7 @@ static void LerpColors(double strain, float*color3) {
    }
 }
 
+// Get the center of all tets
 float* ParticleSystem::GetTetCenter(int* size) {
   *size = tets.size() * 3;
   posTemp.resize(*size);
@@ -66,6 +71,7 @@ float* ParticleSystem::GetTetCenter(int* size) {
   return posTemp.data();
 }
 
+// Get the strain colors of all tets
 float* ParticleSystem::GetCenterColors(int*size, double strainSize) {
   *size = tets.size() * 3;
   colorTemp.resize(*size);
@@ -108,6 +114,7 @@ float* ParticleSystem::GetCenterColors(int*size, double strainSize) {
   return colorTemp.data();
 }
 
+// Get colors for lines
 float* ParticleSystem::GetColors(int* size, double strainSize, float xpos, float ypos, float zpos) {
   *size = tets.size()* 6 * 3 * 2;
   int perTet = 6 * 3 * 2;
@@ -130,6 +137,7 @@ float* ParticleSystem::GetColors(int* size, double strainSize, float xpos, float
   return colorTemp.data();
 }
 
+// Get positions for lines
 float* ParticleSystem::GetPositions3d(int* size) {
   *size = tets.size()* 6 * 3 * 2;
   int perTet = 6 * 3 * 2;
@@ -195,6 +203,7 @@ float* ParticleSystem::GetPositions3d(int* size) {
   return posTemp.data();
 }
 
+// Get triangler colors, its just a light calculation
 float* ParticleSystem::GetTriColors(int* size, double strainSize) {
   *size = faces.size()*3;
   colorTemp.resize(*size);
@@ -233,6 +242,7 @@ float* ParticleSystem::GetTriColors(int* size, double strainSize) {
   return colorTemp.data();
 }
 
+// Get the strain for the surfarce of tris
 float* ParticleSystem::GetStrainSurfaceTriColors(int* size, double strainSize) {
   *size = faces.size()*3;
   colorTemp.resize(*size);
@@ -656,6 +666,7 @@ Eigen::VectorXd vdiffprev;
 double curTime;
 double tripletTime = 0;
 double fromTripletTime = 0;
+double equationSetupTime = 0;
 double solveTime = 0;
 };
 
@@ -671,69 +682,70 @@ void ParticleSystem::ImplicitEulerSparse(double timestep) {
 
   static std::vector<Eigen::Triplet<double>> iesdfdxtriplet;
 
-  //static std::vector<Eigen::Matrix3d> strainForTets;
+  static std::vector<Eigen::Matrix3d> strainForTets;
 
-  //if (!hasPrev) {
-  //  strainForTets.resize(tets.size() * 16);
-  //  for (int i = 0; i < tets.size(); i++) {
-  //    Particle *p1,*p2,*p3,*p4;
-  //    GetTetP(i, p1, p2, p3, p4);
+  if (!hasPrev) {
+    strainForTets.resize(tets.size() * 16);
+    printf("Number of tets: %i\n", tets.size());
+    for (int i = 0; i < tets.size(); i++) {
+      Particle *p1,*p2,*p3,*p4;
+      GetTetP(i, p1, p2, p3, p4);
 
-  //    Eigen::Vector3d y0, y1, y2, y3;
+      Eigen::Vector3d y0, y1, y2, y3;
 
-  //    y1 << tets[i].inversePos(0,0), tets[i].inversePos(0,1), tets[i].inversePos(0,2);
-  //    y2 << tets[i].inversePos(1,0), tets[i].inversePos(1,1), tets[i].inversePos(1,2);
-  //    y3 << tets[i].inversePos(2,0), tets[i].inversePos(2,1), tets[i].inversePos(2,2);
+      y1 << tets[i].inversePos(0,0), tets[i].inversePos(0,1), tets[i].inversePos(0,2);
+      y2 << tets[i].inversePos(1,0), tets[i].inversePos(1,1), tets[i].inversePos(1,2);
+      y3 << tets[i].inversePos(2,0), tets[i].inversePos(2,1), tets[i].inversePos(2,2);
 
-  //    y0 = -1* y1 - y2 - y3;
+      y0 = -1* y1 - y2 - y3;
 
-  //    double v = .4;
-  //    double a =  tets[i].posDet * tets[i].k * (1 - v) / ((1 + v) * (1 - 2 * v));
-  //    double b =  tets[i].posDet * tets[i].k *  v / ((1 + v) * (1 - 2 * v));
-  //    double c =  tets[i].posDet * tets[i].k * (1 - 2 * v) / ((1 + v) * (1 - 2 * v));
-  //    Eigen::Matrix3d middle1, middle2;
-  //    Eigen::Matrix3d temp, temp1,temp2,temp3,temp4;
-  //    middle1 << a, b, b,
-  //               b, a, b,
-  //               b, b, a;
-  //    middle2 << c, 0, 0,
-  //               0, c, 0,
-  //               0, 0, c;
+      double v = .4;
+      double a =  tets[i].posDet * tets[i].k * (1 - v) / ((1 + v) * (1 - 2 * v));
+      double b =  tets[i].posDet * tets[i].k *  v / ((1 + v) * (1 - 2 * v));
+      double c =  tets[i].posDet * tets[i].k * (1 - 2 * v) / ((1 + v) * (1 - 2 * v));
+      Eigen::Matrix3d middle1, middle2;
+      Eigen::Matrix3d temp, temp1,temp2,temp3,temp4;
+      middle1 << a, b, b,
+                 b, a, b,
+                 b, b, a;
+      middle2 << c, 0, 0,
+                 0, c, 0,
+                 0, 0, c;
 
-  //    for (int index1 = 0; index1 < 4; ++index1) {
-  //      Eigen::Vector3d *j0;
-  //      switch(index1) {
-  //        case 0: j0 = &y0; break;
-  //        case 1: j0 = &y1; break;
-  //        case 2: j0 = &y2; break;
-  //        case 3: j0 = &y3; break;
-  //      }
-  //      temp1 << (*j0)[0], 0, 0,
-  //               0, (*j0)[1], 0,
-  //               0, 0, (*j0)[2];
-  //      temp3 << (*j0)[1], 0, (*j0)[2],
-  //               (*j0)[0], (*j0)[2], 0,
-  //               0, (*j0)[1], (*j0)[0];
-  //      for (int index2 = 0; index2 < 4; ++index2) {
-  //        Eigen::Vector3d *j1;
-  //        switch(index2) {
-  //          case 0: j1 = &y0; break;
-  //          case 1: j1 = &y1; break;
-  //          case 2: j1 = &y2; break;
-  //          case 3: j1 = &y3; break;
-  //        }
-  //        temp2 << (*j1)[0], 0, 0,
-  //                 0, (*j1)[1], 0,
-  //                 0, 0, (*j1)[2];
-  //        temp4 << (*j1)[1], (*j1)[0], 0,
-  //                 0, (*j1)[2], (*j1)[1],
-  //                 (*j1)[2], 0, (*j1)[0];
-  //        temp = temp1 * middle1 * temp2 + temp3 * middle2 * temp4;
-  //        strainForTets[i * 16 + index1 * 4 + index2] = temp;
-  //      }
-  //    }
-  //  }
-  //}
+      for (int index1 = 0; index1 < 4; ++index1) {
+        Eigen::Vector3d *j0;
+        switch(index1) {
+          case 0: j0 = &y0; break;
+          case 1: j0 = &y1; break;
+          case 2: j0 = &y2; break;
+          case 3: j0 = &y3; break;
+        }
+        temp1 << (*j0)[0], 0, 0,
+                 0, (*j0)[1], 0,
+                 0, 0, (*j0)[2];
+        temp3 << (*j0)[1], 0, (*j0)[2],
+                 (*j0)[0], (*j0)[2], 0,
+                 0, (*j0)[1], (*j0)[0];
+        for (int index2 = 0; index2 < 4; ++index2) {
+          Eigen::Vector3d *j1;
+          switch(index2) {
+            case 0: j1 = &y0; break;
+            case 1: j1 = &y1; break;
+            case 2: j1 = &y2; break;
+            case 3: j1 = &y3; break;
+          }
+          temp2 << (*j1)[0], 0, 0,
+                   0, (*j1)[1], 0,
+                   0, 0, (*j1)[2];
+          temp4 << (*j1)[1], (*j1)[0], 0,
+                   0, (*j1)[2], (*j1)[1],
+                   (*j1)[2], 0, (*j1)[0];
+          temp = temp1 * middle1 * temp2 + temp3 * middle2 * temp4;
+          strainForTets[i * 16 + index1 * 4 + index2] = temp;
+        }
+      }
+    }
+  }
 
   iesA.resize(vSize, vSize);
   iesb.resize(vSize);
@@ -748,91 +760,40 @@ void ParticleSystem::ImplicitEulerSparse(double timestep) {
     Particle *p1,*p2,*p3,*p4;
     GetTetP(i, p1, p2, p3, p4);
 
-    Eigen::Vector3d y0, y1, y2, y3;
-
-    y1 << tets[i].inversePos(0,0), tets[i].inversePos(0,1), tets[i].inversePos(0,2);
-    y2 << tets[i].inversePos(1,0), tets[i].inversePos(1,1), tets[i].inversePos(1,2);
-    y3 << tets[i].inversePos(2,0), tets[i].inversePos(2,1), tets[i].inversePos(2,2);
-
-    y0 = -1* y1 - y2 - y3;
-
-    double v = .4;
-    double a =  tets[i].posDet * tets[i].k * (1 - v) / ((1 + v) * (1 - 2 * v));
-    double b =  tets[i].posDet * tets[i].k *  v / ((1 + v) * (1 - 2 * v));
-    double c =  tets[i].posDet * tets[i].k * (1 - 2 * v) / ((1 + v) * (1 - 2 * v));
-    Eigen::Matrix3d middle1, middle2;
-    Eigen::Matrix3d temp, temp1,temp2,temp3,temp4;
-    middle1 << a, b, b,
-               b, a, b,
-               b, b, a;
-    middle2 << c, 0, 0,
-               0, c, 0,
-               0, 0, c;
-
-    // Get Rotation matrix
     Eigen::Matrix3d Rot;
-    //{
-    //  Eigen::Matrix3d m1,m2;
-    //  Eigen::Vector3d r0,r1,r2;
-    //  m1 << p2->x - p1->x, p3->x - p1->x, p4->x - p1->x;
-    //  m2 = m1 * tets[i].inversePos;
-    //  r0 = (m2.col(0)).normalized();
-    //  r1 = (m2.col(1) - r0.dot(m2.col(1)) * r0).normalized();
-    //  r2 = r0.cross(r1);
-    //  Rot.col(0) = r0;
-    //  Rot.col(1) = r1;
-    //  Rot.col(2) = r2;
-    //}
     if (corotational) {
-      Eigen::Matrix3d mapping1, mapping2;
-      mapping1 << p2->x - p1->x, p3->x - p1->x, p4->x - p1->x;
-      mapping2 = mapping1 * tets[i].inversePos;
-      Eigen::Affine3d trans1;
-      trans1 = mapping2;
-      Rot = trans1.rotation();
+      Eigen::Matrix3d m1,m2;
+      Eigen::Vector3d r0,r1,r2;
+      m1 << p2->x - p1->x, p3->x - p1->x, p4->x - p1->x;
+      m2 = m1 * tets[i].inversePos;
+      r0 = (m2.col(0)).normalized();
+      r1 = (m2.col(1) - r0.dot(m2.col(1)) * r0).normalized();
+      r2 = r0.cross(r1);
+      Rot.col(0) = r0;
+      Rot.col(1) = r1;
+      Rot.col(2) = r2;
+
+      //Eigen::Matrix3d mapping1, mapping2;
+      //mapping1 << p2->x - p1->x, p3->x - p1->x, p4->x - p1->x;
+      //mapping2 = mapping1 * tets[i].inversePos;
+      //Eigen::Affine3d trans1;
+      //trans1 = mapping2;
+      //Rot = trans1.rotation();
     }
     // for all combos
     for (int index1 = 0; index1 < 4; ++index1) {
-      //if (tets[i].to[index1] < 0) continue;
-      Eigen::Vector3d *j0;
-      switch(index1) {
-        case 0: j0 = &y0; break;
-        case 1: j0 = &y1; break;
-        case 2: j0 = &y2; break;
-        case 3: j0 = &y3; break;
-      }
-      temp1 << (*j0)[0], 0, 0,
-               0, (*j0)[1], 0,
-               0, 0, (*j0)[2];
-      temp3 << (*j0)[1], 0, (*j0)[2],
-               (*j0)[0], (*j0)[2], 0,
-               0, (*j0)[1], (*j0)[0];
       for (int index2 = 0; index2 < 4; ++index2) {
-        //if (tets[i].to[index2] >= 0) {//continue;
-        Eigen::Vector3d *j1;
-        switch(index2) {
-          case 0: j1 = &y0; break;
-          case 1: j1 = &y1; break;
-          case 2: j1 = &y2; break;
-          case 3: j1 = &y3; break;
-        }
-        temp2 << (*j1)[0], 0, 0,
-                 0, (*j1)[1], 0,
-                 0, 0, (*j1)[2];
-        temp4 << (*j1)[1], (*j1)[0], 0,
-                 0, (*j1)[2], (*j1)[1],
-                 (*j1)[2], 0, (*j1)[0];
-        temp = temp1 * middle1 * temp2 + temp3 * middle2 * temp4;
+        Eigen::Matrix3d* temp = &(strainForTets[i * 16 + index1 * 4 + index2]);
         Eigen::Matrix3d kelement;
         if (corotational) {
           if (tets[i].to[index1] >= 0) {
-            kelement = Rot * temp * Rot.transpose();
+            kelement = Rot * (*temp) * Rot.transpose();
             Eigen::Vector3d oPos;
 
 
             if (tets[i].to[index2] >= 0) {
               oPos = startPos[tets[i].to[index2]];
-              Eigen::Vector3d force = (Rot * temp * oPos);
+              Eigen::Vector3d force = (Rot * (*temp) * oPos);
               f_0[tets[i].to[index1] * 3] += force[0];
               f_0[tets[i].to[index1] * 3 + 1] += force[1];
               f_0[tets[i].to[index1] * 3 + 2] += force[2];
@@ -844,7 +805,7 @@ void ParticleSystem::ImplicitEulerSparse(double timestep) {
                 case 2: oPos = p3->x; break;
                 case 3: oPos = p4->x; break;
               }
-              Eigen::Vector3d force = (Rot * temp * oPos);
+              Eigen::Vector3d force = (Rot * (*temp) * oPos);
               force -= kelement * oPos; // since the fixed point doesn't exist in the solver
               f_0[tets[i].to[index1] * 3] += force[0];
               f_0[tets[i].to[index1] * 3 + 1] += force[1];
@@ -852,7 +813,8 @@ void ParticleSystem::ImplicitEulerSparse(double timestep) {
             }
           }
         } else {
-          kelement = temp;
+          if (tets[i].to[index1] < 0 || tets[i].to[index2] < 0) continue;
+          kelement = *temp;
           PushbackMatrix3d(iesdfdxtriplet, kelement, tets[i].to[index1] * 3, tets[i].to[index2] * 3, 1);
         }
       }
@@ -864,6 +826,9 @@ void ParticleSystem::ImplicitEulerSparse(double timestep) {
 
   iesdfdx.setFromTriplets(iesdfdxtriplet.begin(), iesdfdxtriplet.end());
 
+  tempTime = glfwGetTime();
+  fromTripletTime += tempTime - curTime;
+  curTime = tempTime;
 
   Eigen::VectorXd v_0(vSize);
   Eigen::VectorXd x_0(vSize);
@@ -902,8 +867,9 @@ void ParticleSystem::ImplicitEulerSparse(double timestep) {
   cg.setTolerance(.000001);
   cg.setMaxIterations(20);
 
+
   tempTime = glfwGetTime();
-  fromTripletTime += tempTime - curTime;
+  equationSetupTime += tempTime - curTime;
   curTime = tempTime;
 
   cg.compute(iesA);
@@ -1154,10 +1120,11 @@ void ParticleSystem::ExplicitEuler(double timestep) {
   }*/
 }
 
-void ParticleSystem::GetProfileInfo(double& triplet, double& fromTriplet, double& solve) {
+void ParticleSystem::GetProfileInfo(double& triplet, double& fromTriplet, double& solve, double& setupTime) {
    triplet = tripletTime;
    fromTriplet = fromTripletTime;
    solve = solveTime;
+   setupTime = equationSetupTime;
 }
 
 void ParticleSystem::AddTet(int x1, int x2, int x3, int x4) {

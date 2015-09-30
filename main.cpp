@@ -215,10 +215,10 @@ int main(int argc, char **argv) {
   printf("Simulate time %f\n", simulatetime/frames);
   printf("Draw time %f\n", drawtime/frames);
   printf("Frames %d\n", frames);
-  double triplet, fromtriplet, solve;
-  m.GetProfileInfo(triplet, fromtriplet, solve);
-  printf("Triplet %f, from %f, solve %f \n", triplet/frames, fromtriplet/frames, solve/frames);
-  printf("Total %f\n", triplet + fromtriplet + solve);
+  double triplet, fromtriplet, solve, setup;
+  m.GetProfileInfo(triplet, fromtriplet, solve, setup);
+  printf("Triplet %f, from %f, solve %f, setup %f\n", triplet/frames, fromtriplet/frames, solve/frames, setup/frames);
+  printf("Total %f\n", triplet + fromtriplet + solve + setup);
   glfwDestroyWindow(window);
 
   glfwTerminate();

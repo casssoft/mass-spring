@@ -54,7 +54,7 @@ class ParticleSystem {
   void Reset();
   void SetSpringProperties(double k, double c);
 
-  void GetProfileInfo(double& triplet, double& fromtriplet, double& solve);
+  void GetProfileInfo(double& triplet, double& fromtriplet, double& solve, double& equationSetupTime);
 
   std::vector<Tetrahedra> tets;
   std::vector<Particle> particles;
