@@ -16,7 +16,7 @@ void error_callback(int error, const char* description) {
 int changeSetup = 0;
 bool drawSimulation = true;
 bool solveWithguess = true;
-bool corotational = false;
+bool corotational = true;
 int bridgeL = 10;
 Scene* scene_p;
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
@@ -149,8 +149,8 @@ int main(int argc, char **argv) {
     }
   }
 
-  m.SetupArmadillo();
-  //m.SetupSingleSpring();
+  //m.SetupArmadillo();
+  m.SetupSingleSpring();
   //m.SetupBendingBar();
   //m.SetupTriangle();
   //m.SetupMouseSpring(5);

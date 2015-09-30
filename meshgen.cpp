@@ -178,7 +178,7 @@ void MeshGen::GenerateMesh(double*& points, int& psize, std::vector<int>& tets, 
   //   do quality mesh generation (q) with a specified quality bound
   //   (1.414), and apply a maximum volume constraint (a0.1).
 
-  tetrahedralize("pnnqa.5", &in, &out);
+  tetrahedralize("pnnqa.05", &in, &out);
 
   points = new double[out.numberofpoints*3];
   for (int i = 0; i < out.numberofpoints*3;++i) {
