@@ -34,7 +34,7 @@ class Tetrahedra {
 class ParticleSystem {
  public:
   ParticleSystem();
-  void Update(double timestep, bool solveWithguess, bool corotational);
+  void Update(double timestep, bool solveWithguess, bool corotational, int groundMode);
   float* GetPositions3d(int* size);
   float* GetSurfaceTriangles3d(int* size);
   float* GetAllTriangles3d(int* size);
@@ -52,7 +52,7 @@ class ParticleSystem {
   void SetupArmadillo();
   void SetupMeshFile(char*filename);
   void Reset();
-  void SetSpringProperties(double k, double c);
+  void SetSpringProperties(double k, double c, double gStiffness);
 
   void GetProfileInfo(double& triplet, double& fromtriplet, double& solve, double& equationSetupTime);
 
@@ -74,8 +74,9 @@ class ParticleSystem {
   std::vector<int> facetotet;
   double stiffness;
   double dampness;
+  double groundStiffness;
   double gravity;
-  bool ground;
+  double groundLevel;
   bool corotational;
   void AddTet(int x1, int x2, int x3, int x4);
   void GetTetP(int i, Particle*& p1, Particle*& p2, Particle*& p3, Particle*& p4);

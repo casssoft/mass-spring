@@ -18,6 +18,7 @@ bool drawSimulation = true;
 bool solveWithguess = true;
 bool corotational = true;
 int bridgeL = 10;
+int typeOfGround = 0;
 Scene* scene_p;
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
@@ -91,6 +92,10 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
       case 'C':
         corotational = corotational ? false : true;
         break;
+      case 'G':
+        typeOfGround++;
+        printf("Type of ground : %i\n", typeOfGround);
+        break;
     }
   } else if (action == GLFW_RELEASE) {
     switch(key) {
@@ -139,13 +144,13 @@ int main(int argc, char **argv) {
   // Particle system setup
   ParticleSystem m;
   double strainSize = 10;
-  if (argc >= 3) {
-    m.SetSpringProperties(atof(argv[1]), atof(argv[2]));
-    if (argc >= 4) {
-      strainSize = atof(argv[3]);
-    }
+  if (argc >= 4) {
+    m.SetSpringProperties(atof(argv[1]), atof(argv[2]), atof(argv[3]));
     if (argc >= 5) {
-      meshFilename = argv[4];
+      strainSize = atof(argv[4]);
+    }
+    if (argc >= 6) {
+      meshFilename = argv[5];
     }
   }
 
@@ -188,7 +193,7 @@ int main(int argc, char **argv) {
     // Update m
     double timestep = scene.GetTimestep();
 
-    m.Update(timestep, solveWithguess, corotational);
+    m.Update(timestep, solveWithguess, corotational, typeOfGround);
 
     double tempTime = glfwGetTime();
     simulatetime += tempTime - curTime;

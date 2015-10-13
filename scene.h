@@ -21,6 +21,7 @@ class Scene {
   bool walkForward, walkBack, walkRight, walkLeft, walkUp, walkDown;
   int drawMode;
   bool slowMode;
+  int groundMode;
  private:
   int frames;
   bool limitFps;

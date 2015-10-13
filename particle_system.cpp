@@ -11,10 +11,11 @@ ParticleSystem::ParticleSystem() {
   stiffness = 1000;
   dampness = 10;
   gravity = 9.8;
-  ground = false;
+  groundLevel = 5;
+  groundStiffness = 1000;
 }
 
-void ParticleSystem::Update(double timestep, bool solveWithguess, bool coro) {
+void ParticleSystem::Update(double timestep, bool solveWithguess, bool coro, int groundMode) {
   // Always solveWithguess
   // coro means whether to use corotational linear FEM or normal linear FEM
   corotational = coro;
@@ -22,21 +23,82 @@ void ParticleSystem::Update(double timestep, bool solveWithguess, bool coro) {
   //ExplicitEuler(timestep);
 
   // Optionally make things bounce of the ground
-  if (ground) {
-    for (int i = 0; i < particles.size(); i++) {
-      if (particles[i].x[1] > 5) {
-        particles[i].x[1] = 5;
-        if (particles[i].v[1] > 0) {
-            particles[i].v[1] = -.8 * particles[i].v[1];
-          /*if (particles[i].v[0] > 0) {
-            particles[i].v[0] -= 5000 * timestep;
-          } else {
-            particles[i].v[0] += 5000 * timestep;
-          }*/
+  switch (groundMode) {
+    case 0:
+      break;
+    case 1:
+      // Penalty method
+      for (int i = 0; i < particles.size(); i++) {
+        if (particles[i].x[1] > groundLevel) {
+          particles[i].f[1] -= groundStiffness * (particles[i].x[1] - groundLevel) * timestep;
         }
       }
-    }
+      break;
+    case 2:
+      // Snap to floor
+      for (int i = 0; i < particles.size(); i++) {
+        if (particles[i].x[1] > groundLevel) {
+          particles[i].x[1] = groundLevel;
+        }
+      }
+      break;
+    case 3:
+      // Snap to floor and penalty
+      for (int i = 0; i < particles.size(); i++) {
+        if (particles[i].x[1] > groundLevel) {
+          particles[i].f[1] -= groundStiffness * (particles[i].x[1] - groundLevel) * timestep;
+          particles[i].x[1] = groundLevel;
+        }
+      }
+      break;
+    case 4:
+      //Snap to prev intersection with ground and ground normal penalty
+      for (int i = 0; i < particles.size(); i++) {
+        if (particles[i].x[1] > groundLevel) {
+          double part = (particles[i].x[1] - groundLevel)/particles[i].v[1];
+          particles[i].f[1] -= groundStiffness * (particles[i].x[1] - groundLevel) * timestep;
+          particles[i].x = particles[i].x - part * particles[i].v;
+        }
+      }
+      break;
+    case 5:
+      // Snap to prev intersection with ground and velocity penalty
+      for (int i = 0; i < particles.size(); i++) {
+        if (particles[i].x[1] > groundLevel) {
+          double part = (particles[i].x[1] - groundLevel)/particles[i].v[1];
+          particles[i].x = particles[i].x - part * particles[i].v;
+          particles[i].f -= part * particles[i].v * timestep * groundStiffness;
+        }
+      }
+      break;
+    case 6:
+      //Snap to prev intersection with ground and ground normal penalty plus friction
+      for (int i = 0; i < particles.size(); i++) {
+        if (particles[i].x[1] > groundLevel) {
+          double part = (particles[i].x[1] - groundLevel)/particles[i].v[1];
+          particles[i].f[1] -= groundStiffness * (particles[i].x[1] - groundLevel) * timestep;
+          particles[i].f[0] -= part * particles[i].v[0] * timestep * groundStiffness;
+          particles[i].f[2] -= part * particles[i].v[2] * timestep * groundStiffness;
+          particles[i].x[1] = groundLevel;
+        }
+      }
+      break;
   }
+  //if (ground) {
+  //  for (int i = 0; i < particles.size(); i++) {
+  //    if (particles[i].x[1] > 5) {
+  //      particles[i].x[1] = 5;
+  //      if (particles[i].v[1] > 0) {
+  //          particles[i].v[1] = -.8 * particles[i].v[1];
+  //        /*if (particles[i].v[0] > 0) {
+  //          particles[i].v[0] -= 5000 * timestep;
+  //        } else {
+  //          particles[i].v[0] += 5000 * timestep;
+  //        }*/
+  //      }
+  //    }
+  //  }
+  //}
 }
 
 // Help function to show strain properly through color
@@ -463,7 +525,7 @@ void ParticleSystem::SetupSingleSpring() {
 
   AddTet(0, 1, 2, -1);
   gravity = 2;
-  ground = false;
+  //ground = false;
 
 }
 
@@ -516,7 +578,7 @@ void ParticleSystem::SetupBendingBar() {
    // particles[i].v[1] += -5;
   }
   gravity = 9.8;
-  ground = false;
+  //ground = false;
   delete[] points;
 }
 
@@ -587,21 +649,21 @@ void ParticleSystem::SetupMeshFile(char* filename) {
   }
 
   //Make lowest points fixed
-  for (int i = 0; i < psize; ++i) {
-    if (particles[i].x[1] > lowestpoint - .1) {
-      printf("fixed_point!\n");
-      MakeFixedPoint(i, tets, faces);
-      psize -= 1;
-      i--;
-    }
-  }
+  //for (int i = 0; i < psize; ++i) {
+  //  if (particles[i].x[1] > lowestpoint - .1) {
+  //    printf("fixed_point!\n");
+  //    MakeFixedPoint(i, tets, faces);
+  //    psize -= 1;
+  //    i--;
+  //  }
+  //}
 
   for (int i = 0; i < (tets.size()/4); ++i) {
     AddTet(tets[i*4], tets[i*4+1], tets[i*4 + 2], tets[i*4 + 3]);
   }
   CopyIntoStartPos(); 
-  gravity = 9.8;
-  ground = false;
+  gravity = 9.8 * 2;
+  groundLevel = lowestpoint + 1;
   delete[] points;
   printf("Number of faces%d\n", faces.size()/3);
 }
@@ -637,9 +699,10 @@ void ParticleSystem::CalculateParticleMass(int i, float springMass) {
 }
 
 
-void ParticleSystem::SetSpringProperties(double k, double c) {
+void ParticleSystem::SetSpringProperties(double k, double c, double gStiffness) {
   stiffness = k;
   dampness = c;
+  groundStiffness = gStiffness;
 }
 
 namespace {
@@ -849,9 +912,10 @@ void ParticleSystem::ImplicitEulerSparse(double timestep) {
       x_0[i * 3 + 1] = particles[i].x[1] - startPos[i][1];
       x_0[i * 3 + 2] = particles[i].x[2] - startPos[i][2];
     }
-    f_ext[i * 3] = 0;
-    f_ext[i * 3 + 1] = gravity/particles[i].iMass;
-    f_ext[i * 3 + 2] = 0;
+    f_ext[i * 3] = particles[i].f[0];
+    f_ext[i * 3 + 1] = gravity/particles[i].iMass + particles[i].f[1];
+    f_ext[i * 3 + 2] = particles[i].f[2];
+    particles[i].f << 0,0,0;
     masstriplet.push_back(Eigen::Triplet<double>(i*3,i*3,1/particles[i].iMass));
     masstriplet.push_back(Eigen::Triplet<double>(i*3+1,i*3+1,1/particles[i].iMass));
     masstriplet.push_back(Eigen::Triplet<double>(i*3+2,i*3+2,1/particles[i].iMass));
