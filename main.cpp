@@ -330,6 +330,9 @@ int main(int argc, const char **argv) {
         offset = scene_p->fpsVec.size() - 40;
       }
       ImGui::PlotLines("Frames Per Second##Graph", scene_p->fpsVec.data() + offset, scene_p->fpsVec.size() - offset, 0, NULL, 0.0, 200.0f, ImVec2(0,150));
+      char buffer[1000];
+      snprintf(buffer, 1000, "Current FPS: %.3f", scene_p->fpsVec[scene_p->fpsVec.size() - 1]);
+      ImGui::Text(buffer);
       ImGui::Checkbox("Limit to 60 FPS?", &(scene_p->limitFps));
     }
 

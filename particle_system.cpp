@@ -28,51 +28,66 @@ void ParticleSystem::Update(double timestep, bool solveWithguess, bool coro, int
       break;
     case 1:
       // Penalty method
-      for (int i = 0; i < particles.size(); i++) {
-        if (particles[i].x[1] > groundLevel) {
-          particles[i].f[1] -= groundStiffness * (particles[i].x[1] - groundLevel) * timestep;
+      for (int i = 0; i < outsidePoints.size(); i++) {
+        if (outsidePoints[i] > -1) {
+          int point = outsidePoints[i];
+          if (particles[point].x[1] > groundLevel) {
+            particles[point].f[1] -= groundStiffness * (particles[point].x[1] - groundLevel) * timestep;
+          }
         }
       }
       break;
     case 2:
       // Snap to floor and penalty
       for (int i = 0; i < particles.size(); i++) {
-        if (particles[i].x[1] > groundLevel) {
-          particles[i].f[1] -= groundStiffness * (particles[i].x[1] - groundLevel) * timestep;
-          particles[i].x[1] = groundLevel;
+        if (outsidePoints[i] > -1) {
+          int point = outsidePoints[i];
+          if (particles[point].x[1] > groundLevel) {
+            particles[point].f[1] -= groundStiffness * (particles[point].x[1] - groundLevel) * timestep;
+            particles[point].x[1] = groundLevel;
+          }
         }
       }
       break;
     case 3:
       //Snap to prev intersection with ground and ground normal penalty
       for (int i = 0; i < particles.size(); i++) {
-        if (particles[i].x[1] > groundLevel) {
-          double part = (particles[i].x[1] - groundLevel)/particles[i].v[1];
-          particles[i].f[1] -= groundStiffness * (particles[i].x[1] - groundLevel) * timestep;
-          particles[i].x = particles[i].x - part * particles[i].v;
-          particles[i].v[1] = 0;
+        if (outsidePoints[i] > -1) {
+          int point = outsidePoints[i];
+          if (particles[point].x[1] > groundLevel) {
+            double part = (particles[point].x[1] - groundLevel)/particles[point].v[1];
+            particles[point].f[1] -= groundStiffness * (particles[point].x[1] - groundLevel) * timestep;
+            particles[point].x = particles[point].x - part * particles[point].v;
+            particles[point].v[1] = 0;
+          }
         }
       }
       break;
     case 4:
       //Snap to prev intersection with ground and ground normal penalty plus friction
       for (int i = 0; i < particles.size(); i++) {
-        if (particles[i].x[1] > groundLevel) {
-          double part = (particles[i].x[1] - groundLevel)/particles[i].v[1];
-          particles[i].f[1] -= groundStiffness * (particles[i].x[1] - groundLevel) * timestep;
-          particles[i].f[0] -= part * particles[i].v[0] * timestep * groundStiffness;
-          particles[i].f[2] -= part * particles[i].v[2] * timestep * groundStiffness;
-          particles[i].x[1] = groundLevel;
+        if (outsidePoints[i] > -1) {
+          int point = outsidePoints[i];
+          if (particles[point].x[1] > groundLevel) {
+            double part = (particles[point].x[1] - groundLevel)/particles[point].v[1];
+            particles[point].f[1] -= groundStiffness * (particles[point].x[1] - groundLevel) * timestep;
+            particles[point].f[0] -= part * particles[point].v[0] * timestep * groundStiffness;
+            particles[point].f[2] -= part * particles[point].v[2] * timestep * groundStiffness;
+            particles[point].x[1] = groundLevel;
+          }
         }
       }
     case 5:
       //Snap to floor and infinite friction
       for (int i = 0; i < particles.size(); i++) {
-        if (particles[i].x[1] > groundLevel) {
-          particles[i].x[1] = groundLevel;
-          particles[i].v[0] = 0;
-          particles[i].v[1] = 0;
-          particles[i].v[2] = 0;
+        if (outsidePoints[i] > -1) {
+          int point = outsidePoints[i];
+          if (particles[point].x[1] > groundLevel) {
+            particles[point].x[1] = groundLevel;
+            particles[point].v[0] = 0;
+            particles[point].v[1] = 0;
+            particles[point].v[2] = 0;
+          }
         }
       }
       break;
@@ -560,6 +575,7 @@ void ParticleSystem::SetupBendingBar() {
   //  CalculateParticleMass(i, 200.0/edges.size());
   //}
   CopyIntoStartPos(); 
+  CreateOutsidePointListFromFaces();
   for (int i = 0; i < particles.size(); ++i) {
     //if (particles[i].x[2] < -2)
     //particles[i].v[1] += 5;
@@ -604,6 +620,7 @@ void ParticleSystem::SetupArmadillo() {
   //  CalculateParticleMass(i, 200.0/edges.size());
   //}
   CopyIntoStartPos(); 
+  CreateOutsidePointListFromFaces();
   //for (int i = 0; i < particles.size(); ++i) {
   //  if (particles[i].x[2] < -6)
   //  particles[i].v[1] += .5;
@@ -654,10 +671,25 @@ void ParticleSystem::SetupMeshFile(const char* filename) {
   for (int i = 0; i < (tets.size()/4); ++i) {
     AddTet(tets[i*4], tets[i*4+1], tets[i*4 + 2], tets[i*4 + 3]);
   }
-  CopyIntoStartPos(); 
+  CopyIntoStartPos();
+  CreateOutsidePointListFromFaces();
   groundLevel = lowestpoint + 1;
   delete[] points;
   printf("Number of faces%d\n", faces.size()/3);
+}
+
+void ParticleSystem::CreateOutsidePointListFromFaces() {
+  for (int i = 0; i < faces.size(); ++i) {
+    bool addPoint = true;
+    for(int j = outsidePoints.size() - 1; j >= 0 && addPoint; --j) {
+      if (outsidePoints[j] == faces[i]) {
+        addPoint = false;
+      }
+    }
+    if (addPoint) {
+      outsidePoints.push_back(faces[i]);
+    }
+  }
 }
 
 void ParticleSystem::MakeFixedPoint(int p, std::vector<int>& edges, std::vector<int>& faces) {

@@ -46,6 +46,7 @@ void ParticleSystem::Reset() {
   hasPrev = false;
   faces.clear();
   facetotet.clear();
+  outsidePoints.clear();
 }
 
 void ParticleSystem::ImplicitEulerSparse(double timestep) {

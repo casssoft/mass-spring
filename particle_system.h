@@ -61,6 +61,7 @@ class ParticleSystem {
   std::vector<Particle> fixed_points;
  private:
   void MakeFixedPoint(int i, std::vector<int>& edges, std::vector<int>& faces);
+  void CreateOutsidePointListFromFaces();
   void ComputeForces();
   void ExplicitEuler(double timestep);
   void ImplicitEulerSparse(double timestep);
@@ -72,6 +73,7 @@ class ParticleSystem {
   std::vector<double> phaseTemp;
   std::vector<int> faces;
   std::vector<int> facetotet;
+  std::vector<int> outsidePoints;
   double stiffness;
   double volConserve;
   double dampness;
