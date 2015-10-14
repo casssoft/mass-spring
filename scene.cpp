@@ -53,9 +53,12 @@ void Scene::EndOfFrame() {
   if (curTime != timestart) {
     secondsPerFrame = (curTime - timestart)/frames;
   }
+  if (secondsPerFrame * frames > .5) {
+    fpsVec.push_back(1.0/secondsPerFrame);
+    RecalculateFps();
+  }
   if (secondsPerFrame * frames > 4) {
     printf("Frames per second: %f\n", 1.0/secondsPerFrame);
-    RecalculateFps();
   }
 }
 
@@ -179,9 +182,6 @@ void Scene::DrawScene(ParticleSystem* m, double strainSize, bool drawPoints) {
          DrawDelegate::DrawTriangles(points, pSize, colors, cSize);
          break;
      }
-  }
-  if (frames% 100 == 0) {
-     printf("pSize %d\n", pSize);
   }
 }
 

@@ -50,9 +50,9 @@ class ParticleSystem {
   void SetupSingleSpring();
   void SetupBendingBar();
   void SetupArmadillo();
-  void SetupMeshFile(char*filename);
+  void SetupMeshFile(const char*filename);
   void Reset();
-  void SetSpringProperties(double k, double c, double gStiffness);
+  void SetSpringProperties(double k, double volumeConservation, double c, double grav, double gStiffness);
 
   void GetProfileInfo(double& triplet, double& fromtriplet, double& solve, double& equationSetupTime);
 
@@ -73,6 +73,7 @@ class ParticleSystem {
   std::vector<int> faces;
   std::vector<int> facetotet;
   double stiffness;
+  double volConserve;
   double dampness;
   double groundStiffness;
   double gravity;

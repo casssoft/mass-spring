@@ -3,6 +3,7 @@
 #include "tetgen.h"
 #include "Eigen/Sparse"
 #include <vector>
+#include <exception>
 
 void MeshGen::GenerateBar(double*& points, int& psize, std::vector<int>& tets, std::vector<int>& faces, std::vector<int>& facetotet) {
   tetgenio in, out;
@@ -166,19 +167,28 @@ void MeshGen::GenerateBar(double*& points, int& psize, std::vector<int>& tets, s
   }
 }
 
-void MeshGen::GenerateMesh(double*& points, int& psize, std::vector<int>& tets, std::vector<int>& faces, std::vector<int>& facetotet, char* filename) {
+void MeshGen::GenerateMesh(double*& points, int& psize, std::vector<int>& tets, std::vector<int>& faces, std::vector<int>& facetotet, const char* filename) {
   tetgenio out, in;
   int i;
 
   // All indices start from 0.
   in.firstnumber = 0;
-  in.load_ply(filename);
+  try{
+    if (!in.load_ply((char*)filename)) {
+      fprintf(stderr, "Load_ply failed\n");
+      points = NULL;
+      return;
+    }
 
-  // Tetrahedralize the PLC. Switches are chosen to read a PLC (p),
-  //   do quality mesh generation (q) with a specified quality bound
-  //   (1.414), and apply a maximum volume constraint (a0.1).
-
-  tetrahedralize("pnnqa.5", &in, &out);
+    // Tetrahedralize the PLC. Switches are chosen to read a PLC (p),
+    //   do quality mesh generation (q) with a specified quality bound
+    //   (1.414), and apply a maximum volume constraint (a0.1).
+    tetrahedralize("pnnqa.5", &in, &out);
+  } catch (int e) {
+    fprintf(stderr, "Tetrahedralize aborted with %i\n", e);
+    points = NULL;
+    return;
+  }
 
   points = new double[out.numberofpoints*3];
   for (int i = 0; i < out.numberofpoints*3;++i) {

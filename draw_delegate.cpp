@@ -66,6 +66,7 @@ PFNGLUNIFORM3FPROC glUniform3f = NULL;
 #define GL_TEXTURE0                       0x84C0
 #define GL_BGRA                           0x80E1
 #define GL_ELEMENT_ARRAY_BUFFER           0x8893
+#define GL_VERTEX_ARRAY_BINDING           34229
 #endif
 
 #define STARTING_SHEETS 16
@@ -213,6 +214,10 @@ bool DrawDelegate::SetupOpenGL() {
   glColor4f(1.0,1.0,1.0,1.0);
   //glLineWidth(5);
   glPointSize(10);
+  GLenum temp = glGetError();
+  if (temp != GL_NO_ERROR) {
+    fprintf(stderr, "Got GL error: %x line %i\n", temp, __LINE__);
+  }
   return 1;
 }
 
@@ -225,6 +230,14 @@ void DrawDelegate::SetViewMatrix(float* viewmatrix) {
 }
 void DrawDelegate::BeginFrame() {
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+  glUseProgram(shaderProgram);
+
+  glBindBuffer(GL_ARRAY_BUFFER, colorVBO);
+  glVertexAttribPointer(colorAttribute, 3, GL_FLOAT, false, 0, 0);
+  glBindBuffer(GL_ARRAY_BUFFER, pointVBO);
+  glVertexAttribPointer(positionAttribute, 3, GL_FLOAT, false, 0, 0);
+  glClearColor(1,1,1,1);
+  glColor4f(1.0,1.0,1.0,1.0);
 }
 
 void DrawDelegate::DrawTriangles(float* pos, int npos, float* color, int ncolor) {
@@ -244,7 +257,7 @@ void DrawDelegate::DrawTriangles(float* pos, int npos, float* color, int ncolor)
   glDrawArrays(GL_TRIANGLES, 0, npos/3);
   GLenum temp = glGetError();
   if (temp != GL_NO_ERROR) {
-    fprintf(stderr, "Got gl error: %d\n", temp);
+    fprintf(stderr, "Got GL error: %x line %i\n", temp, __LINE__);
   }
 }
 
@@ -265,7 +278,7 @@ void DrawDelegate::DrawLines(float* pos, int npos, float* color, int ncolor) {
   glDrawArrays(GL_LINES, 0, npos/3);
   GLenum temp = glGetError();
   if (temp != GL_NO_ERROR) {
-    fprintf(stderr, "Got gl error: %d\n", temp);
+    fprintf(stderr, "Got GL error: %x line %i\n", temp, __LINE__);
   }
 }
 
@@ -286,6 +299,7 @@ void DrawDelegate::DrawPoints(float* pos, int npos, float* color, int ncolor) {
   glDrawArrays(GL_POINTS, 0, npos/3);
   GLenum temp = glGetError();
   if (temp != GL_NO_ERROR) {
-    fprintf(stderr, "Got gl error: %d\n", temp);
+    //fprintf(stderr, "%s\n", gluErrorString(error));
+    fprintf(stderr, "Got GL error: %x line %i\n", temp, __LINE__);
   }
 }

@@ -22,9 +22,10 @@ class Scene {
   int drawMode;
   bool slowMode;
   int groundMode;
+  bool limitFps;
+  std::vector<float> fpsVec;
  private:
   int frames;
-  bool limitFps;
   int GridFloor(double x, int mpG);
   std::vector<float> gridpoints;
   std::vector<float> gridcolors;
