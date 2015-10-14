@@ -13,6 +13,7 @@
 #include "particle_system.h"
 
 #include "Eigen/Dense"
+#include "Eigen/LU"
 
 Scene::Scene() {
   limitFps = true;
@@ -115,6 +116,7 @@ void PerspectiveMatrix(float fovY, float aspect, float near, float far, Eigen::M
 
 #define PI 3.14159265
 }
+static Eigen::Matrix4f g_viewMatrix;
 void Scene::DrawScene(ParticleSystem* m, double strainSize, bool drawPoints) {
   int pSize;
   int cSize;
@@ -156,11 +158,11 @@ void Scene::DrawScene(ParticleSystem* m, double strainSize, bool drawPoints) {
   up << 0, -1, 0;
   RotationMatrix(pos, target, up, rotationMatrix);
   PerspectiveMatrix((65*PI)/180.0, ((float)DDWIDTH)/DDHEIGHT, .5, 100, projectionMatrix);
-  Eigen::Matrix4f viewMatrix = projectionMatrix * rotationMatrix;
+  g_viewMatrix = projectionMatrix * rotationMatrix;
 
 
   DrawDelegate::BeginFrame();
-  DrawDelegate::SetViewMatrix(viewMatrix.data());
+  DrawDelegate::SetViewMatrix(g_viewMatrix.data());
   Scene::DrawGrid(1);
   if (drawPoints) {
      DrawDelegate::SetLineSize(3);
@@ -251,4 +253,20 @@ int Scene::GridFloor(double x, int mpG) {
   int ret = (int)(x/mpG);
   if (x <0) ret -= 1;
   return ret * mpG;
+}
+
+void Scene::GetCameraRay(double x, double y, Eigen::Vector3d* origin, Eigen::Vector3d* ray) {
+  Eigen::Matrix4f inverse;
+  inverse = g_viewMatrix.inverse();
+  Eigen::Vector4f preVec;
+  preVec << (2 * x / DDWIDTH) - 1, (2 * y / DDHEIGHT) - 1, 2 * .5 - 1, 1;
+  Eigen::Vector4f ori = inverse * preVec;
+  (*origin)[0] = ori[0];
+  (*origin)[1] = ori[1];
+  (*origin)[2] = ori[2];
+  preVec[2] = 100;
+  ori = inverse * preVec;
+  (*ray)[0] = ori[0] - (*origin)[0];
+  (*ray)[1] = ori[1] - (*origin)[1];
+  (*ray)[2] = ori[2] - (*origin)[2];
 }

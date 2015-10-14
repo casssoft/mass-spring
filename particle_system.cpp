@@ -6,6 +6,7 @@
 #include "Eigen/Dense"
 #include "Eigen/IterativeLinearSolvers"
 #include <iostream>
+#include <math.h>
 
 ParticleSystem::ParticleSystem() {
   stiffness = 1000;
@@ -39,7 +40,7 @@ void ParticleSystem::Update(double timestep, bool solveWithguess, bool coro, int
       break;
     case 2:
       // Snap to floor and penalty
-      for (int i = 0; i < particles.size(); i++) {
+      for (int i = 0; i < outsidePoints.size(); i++) {
         if (outsidePoints[i] > -1) {
           int point = outsidePoints[i];
           if (particles[point].x[1] > groundLevel) {
@@ -51,7 +52,7 @@ void ParticleSystem::Update(double timestep, bool solveWithguess, bool coro, int
       break;
     case 3:
       //Snap to prev intersection with ground and ground normal penalty
-      for (int i = 0; i < particles.size(); i++) {
+      for (int i = 0; i < outsidePoints.size(); i++) {
         if (outsidePoints[i] > -1) {
           int point = outsidePoints[i];
           if (particles[point].x[1] > groundLevel) {
@@ -65,7 +66,7 @@ void ParticleSystem::Update(double timestep, bool solveWithguess, bool coro, int
       break;
     case 4:
       //Snap to prev intersection with ground and ground normal penalty plus friction
-      for (int i = 0; i < particles.size(); i++) {
+      for (int i = 0; i < outsidePoints.size(); i++) {
         if (outsidePoints[i] > -1) {
           int point = outsidePoints[i];
           if (particles[point].x[1] > groundLevel) {
@@ -79,7 +80,7 @@ void ParticleSystem::Update(double timestep, bool solveWithguess, bool coro, int
       }
     case 5:
       //Snap to floor and infinite friction
-      for (int i = 0; i < particles.size(); i++) {
+      for (int i = 0; i < outsidePoints.size(); i++) {
         if (outsidePoints[i] > -1) {
           int point = outsidePoints[i];
           if (particles[point].x[1] > groundLevel) {
@@ -93,7 +94,7 @@ void ParticleSystem::Update(double timestep, bool solveWithguess, bool coro, int
       break;
     case 6:
       //Implicit penalty and snap to floor
-      for (int i = 0; i < particles.size(); i++) {
+      for (int i = 0; i < outsidePoints.size(); i++) {
         if (outsidePoints[i] > -1) {
           int point = outsidePoints[i];
           if (particles[point].x[1] > groundLevel) {
@@ -108,23 +109,32 @@ void ParticleSystem::Update(double timestep, bool solveWithguess, bool coro, int
       }
       break;
   }
-  //if (ground) {
-  //  for (int i = 0; i < particles.size(); i++) {
-  //    if (particles[i].x[1] > 5) {
-  //      particles[i].x[1] = 5;
-  //      if (particles[i].v[1] > 0) {
-  //          particles[i].v[1] = -.8 * particles[i].v[1];
-  //        /*if (particles[i].v[0] > 0) {
-  //          particles[i].v[0] -= 5000 * timestep;
-  //        } else {
-  //          particles[i].v[0] += 5000 * timestep;
-  //        }*/
-  //      }
-  //    }
-  //  }
-  //}
 }
 
+void ParticleSystem::onMousePress(Eigen::Vector3d ori, Eigen::Vector3d ray) {
+  ray.normalize();
+  double closestDistance = -1;
+  int curPoint = -1;
+  for (int i = 0; i < outsidePoints.size(); i++) {
+    if (outsidePoints[i] > -1) {
+      int point = outsidePoints[i];
+      Eigen::Vector3d pos = particles[point].x - ori;
+      pos.normalize();
+      if (pos.dot(ray) > .9) {
+        double distance = sqrt((particles[point].x - ori).dot(particles[point].x - ori));
+        if (closestDistance < 0 || distance < closestDistance) {
+          curPoint = point;
+        }
+      }
+    }
+  }
+  if (curPoint != -1) {
+    printf("Found point\n");
+    // Fake project onto ray line
+    Eigen::Vector3d vecToRay = particles[curPoint].x - (ori + closestDistance * ray);
+    particles[curPoint].f -= vecToRay * 1000;
+  }
+}
 // Help function to show strain properly through color
 static void LerpColors(double strain, float*color3) {
    if (strain < 1) {

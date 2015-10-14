@@ -35,6 +35,8 @@ class ParticleSystem {
  public:
   ParticleSystem();
   void Update(double timestep, bool solveWithguess, bool corotational, int groundMode);
+  void onMousePress(Eigen::Vector3d origin, Eigen::Vector3d ray);
+
   float* GetPositions3d(int* size);
   float* GetSurfaceTriangles3d(int* size);
   float* GetAllTriangles3d(int* size);

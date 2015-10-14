@@ -1,9 +1,11 @@
 #ifndef SCENE_H__
 #define SCENE_H__
 
+#include "../Eigen/Core"
 #include <vector>
 
 class ParticleSystem;
+
 class Scene {
  public:
   Scene();
@@ -18,6 +20,7 @@ class Scene {
   void DrawGrid(int gridSize);
   void Update(double timestep);
 
+  void GetCameraRay(double x, double y, Eigen::Vector3d* origin, Eigen::Vector3d* ray);
   bool walkForward, walkBack, walkRight, walkLeft, walkUp, walkDown;
   int drawMode;
   bool slowMode;

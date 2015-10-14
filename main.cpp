@@ -181,6 +181,15 @@ int main(int argc, const char **argv) {
     glfwPollEvents();
     ImGui_ImplGlfw_NewFrame();
 
+    //double mouse_x, mouse_y;
+    //glfwGetCursorPos(window, &mouse_x, &mouse_y);
+    //bool mousePressed = glfwGetMouseButton(window, 0);
+    //if (mousePressed) {
+    //  Eigen::Vector3d origin, ray;
+    //  scene.GetCameraRay(mouse_x, mouse_y, &origin, &ray);
+    //  m.onMousePress(origin, ray);
+    //}
+
     curTime = glfwGetTime();
     // Update m
     double timestep = scene.GetTimestep();
