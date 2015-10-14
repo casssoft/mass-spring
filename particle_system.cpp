@@ -91,6 +91,22 @@ void ParticleSystem::Update(double timestep, bool solveWithguess, bool coro, int
         }
       }
       break;
+    case 6:
+      //Implicit penalty and snap to floor
+      for (int i = 0; i < particles.size(); i++) {
+        if (outsidePoints[i] > -1) {
+          int point = outsidePoints[i];
+          if (particles[point].x[1] > groundLevel) {
+            particles[point].v[1] = ((1/particles[point].iMass) * particles[point].v[1] - groundStiffness * timestep * (particles[point].x[1] - groundLevel)) /
+              (1/particles[point].iMass + timestep * timestep * groundStiffness);
+            particles[point].v[0] = 0;
+            particles[point].v[1] = 0;
+            particles[point].v[2] = 0;
+            particles[point].x[1] = groundLevel;
+          }
+        }
+      }
+      break;
   }
   //if (ground) {
   //  for (int i = 0; i < particles.size(); i++) {

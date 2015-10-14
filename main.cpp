@@ -209,9 +209,10 @@ int main(int argc, const char **argv) {
         "Snap to floor and penalty",
         "Snap to prev intersection and penalty",
         "Snap to prev intersection and penalty plus friction penalty",
-        "Snap to floor and infinite friction"
+        "Snap to floor and infinite friction",
+        "Snap to floor and implicit penalty"
       };
-      int groundTypeLength = 6;
+      int groundTypeLength = 7;
 
       if (ImGui::Button("Select Type.."))
           ImGui::OpenPopup("select");
