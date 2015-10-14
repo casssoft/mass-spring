@@ -29,7 +29,7 @@ void LoadModelList() {
       if (ent->d_type != DT_REG) continue;
         int len = strlen(ent->d_name);
         if (strncmp(ent->d_name + len - 4, ".ply", 5) != 0) {
-          printf("Found %s not ply file\n", ent->d_name);
+          //printf("Found %s not ply file\n", ent->d_name);
           continue;
         }
         modelList.push_back(ent->d_name);
@@ -240,6 +240,7 @@ int main(int argc, const char **argv) {
           ImGui::Separator();
           if (ImGui::Selectable("Reload List")) {
             LoadModelList();
+            meshFilename = NULL;
           }
           ImGui::EndPopup();
         }
