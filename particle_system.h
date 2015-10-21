@@ -34,6 +34,7 @@ class Tetrahedra {
 class ParticleSystem {
  public:
   ParticleSystem();
+  ~ParticleSystem();
   void Update(double timestep, bool solveWithguess, bool corotational, int groundMode);
   void onMousePress(Eigen::Vector3d origin, Eigen::Vector3d ray);
 
@@ -76,6 +77,10 @@ class ParticleSystem {
   std::vector<int> faces;
   std::vector<int> facetotet;
   std::vector<int> outsidePoints;
+  std::vector<int> facesFromOutPoints;
+
+  CollisionSystem* colSys;
+
   double stiffness;
   double volConserve;
   double dampness;

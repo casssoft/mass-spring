@@ -7,6 +7,7 @@
 #include "Eigen/IterativeLinearSolvers"
 #include <iostream>
 #include <math.h>
+#include "collision_system.h"
 
 ParticleSystem::ParticleSystem() {
   stiffness = 1000;
@@ -14,6 +15,11 @@ ParticleSystem::ParticleSystem() {
   gravity = 9.8;
   groundLevel = 5;
   groundStiffness = 1000;
+  colSys = new CollisionSystem();
+}
+
+ParticleSystem::~PatricleSystem() {
+  delete colSys;
 }
 
 void ParticleSystem::Update(double timestep, bool solveWithguess, bool coro, int groundMode) {
@@ -23,6 +29,32 @@ void ParticleSystem::Update(double timestep, bool solveWithguess, bool coro, int
   ImplicitEulerSparse(timestep);
   //ExplicitEuler(timestep);
 
+  for (int i = 0; i < outsidePoints.size(); i++) {
+    if (outsidePoints[i] > 0) {
+      colSys->UpdateVertex(i, particles[outsidePoints[i]].x);
+    }
+  }
+  std::vector<unsigned int> vertexToFace;
+  colSys->GetCollisions(vertexToFace);
+  for (int i = 0; i < vertexToFace.size(); i += 2) {
+    // calculate normal of tri
+    Particle *p1, *p2, *p3;
+    int p1_i, p2_i, p3_i;
+    p1_i = facesFromOutPoints[3 * vertexToFace[i + 1]];
+    p2_i = facesFromOutPoints[3 * vertexToFace[i + 1] + 1];
+    p3_i = facesFromOutPoints[3 * vertexToFace[i + 1] + 2];
+    if (p1_i >= 0 && p2_i >= 0 && p3_i >= 0) {
+      p1 = &(particles[p1_i]);
+      p2 = &(particles[p2_i]);
+      p3 = &(particles[p3_i]);
+      Eigen::Vector3d temp1, temp2;
+      temp1 = p2.x - p1.x;
+      temp2 = p3.x - p1.x;
+      temp1 = temp1.cross(temp2);
+      temp1.normalize();
+      // calculate barycentric coordinates of hit
+    }
+  }
   // Optionally make things bounce of the ground
   switch (groundMode) {
     case 0:
