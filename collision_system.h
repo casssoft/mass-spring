@@ -5,6 +5,7 @@
 
 class CollisionSystem {
  public:
+  CollisionSystem();
   ~CollisionSystem();
   void GetCollisions(std::vector<unsigned int>& vertexToFace);
   void UpdateVertex(unsigned int index, const Eigen::Vector3d& vec);

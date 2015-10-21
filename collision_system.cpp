@@ -7,7 +7,8 @@ static tri_list triList;
 static std::vector<unsigned int>* vToF = NULL;
 static bool initialized = false;
 
-void CollisionSystem::~CollisionSystem() {
+CollisionSystem::CollisionSystem() {}
+CollisionSystem::~CollisionSystem() {
   if (initialized) {
     ccdQuitModel();
   }
@@ -20,18 +21,18 @@ void CollisionSystem::InitSystem(const std::vector<Eigen::Vector3d>& verts, cons
   vecList.clear();
   triList.clear();
   for (int i = 0; i < verts.size(); i++) {
-    vecList.push(vec3f(verts[i][0], verts[i][1], verts[i][2]));
+    vecList.push_back(vec3f(verts[i][0], verts[i][1], verts[i][2]));
   }
   for (int i = 0; i < tris.size(); i += 3) {
-    triList.push(tri3f(tris[i], tris[i + 1], tris[i + 2]));
+    triList.push_back(tri3f(tris[i], tris[i + 1], tris[i + 2]));
   }
   ccdInitModel(vecList, triList);
 }
 
 void CollisionSystem::UpdateVertex(unsigned int index, const Eigen::Vector3d& vec) {
-  vecList[index][0] = vec[0];
-  vecList[index][1] = vec[1];
-  vecList[index][2] = vec[2];
+  vecList[index].x = vec[0];
+  vecList[index].y = vec[1];
+  vecList[index].z = vec[2];
 }
 void EECallback(unsigned int e1_v1, unsigned e1_v2,
 				unsigned int e2_v1, unsigned int e2_v2, float t) {
@@ -39,8 +40,8 @@ void EECallback(unsigned int e1_v1, unsigned e1_v2,
 }
 void VFCallback(unsigned int vid, unsigned int fid, float t) {
 	printf("VF result: v=%d, f=%d @ t=%f\n", vid, fid, t);
-  vToF->push(vid);
-  vToF->push(fid);
+  vToF->push_back(vid);
+  vToF->push_back(fid);
 }
 
 void CollisionSystem::GetCollisions(std::vector<unsigned int>& vertexToFace) {

@@ -31,6 +31,7 @@ class Tetrahedra {
  double strain;
 };
 
+class CollisionSystem;
 class ParticleSystem {
  public:
   ParticleSystem();

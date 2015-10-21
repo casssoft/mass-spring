@@ -18,7 +18,7 @@ ParticleSystem::ParticleSystem() {
   colSys = new CollisionSystem();
 }
 
-ParticleSystem::~PatricleSystem() {
+ParticleSystem::~ParticleSystem() {
   delete colSys;
 }
 
@@ -48,8 +48,8 @@ void ParticleSystem::Update(double timestep, bool solveWithguess, bool coro, int
       p2 = &(particles[p2_i]);
       p3 = &(particles[p3_i]);
       Eigen::Vector3d temp1, temp2;
-      temp1 = p2.x - p1.x;
-      temp2 = p3.x - p1.x;
+      temp1 = p2->x - p1->x;
+      temp2 = p3->x - p1->x;
       temp1 = temp1.cross(temp2);
       temp1.normalize();
       // calculate barycentric coordinates of hit

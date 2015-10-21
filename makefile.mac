@@ -1,14 +1,14 @@
 CC=g++
 
-CFLAGS= -pipe -c -DNDEBUG -DMACOSX -I../ -Iimgui -std=c++11  -Wno-write-strings -O2
+CFLAGS= -pipe -c -DNDEBUG -DMACOSX -I../ -Iimgui -Iself-ccd/inc -std=c++11  -Wno-write-strings -O2
 
-LIBS= -pipe libglfw3.a libtet.a -framework Cocoa -framework OpenGL -framework IOKit -framework CoreVideo -O2
+LIBS= -pipe libglfw3.a libtet.a self-ccd/libselfccd.a -framework Cocoa -framework OpenGL -framework IOKit -framework CoreVideo -O2
 STATICOPTIONS= -static-libgcc -static-libstdc++
 EXE=spring
 
 
 OBJSIMGUI=imgui.o imgui_draw.o imgui_impl.o
-OBJS=main.o draw_delegate.o particle_system.o meshgen.o scene.o implicit_euler_impl.o
+OBJS=main.o draw_delegate.o particle_system.o meshgen.o scene.o implicit_euler_impl.o collision_system.o
 
 
 build : $(EXE)
@@ -35,6 +35,9 @@ meshgen.o : meshgen.cpp meshgen.h
 
 scene.o : scene.cpp scene.h draw_delegate.h particle_system.h
 	$(CC) scene.cpp $(CFLAGS) -o $@
+
+collision_system.o: collision_system.cpp collision_system.h
+	$(CC) collision_system.cpp $(CFLAGS) -o $@
 
 imgui.o : imgui/*.h imgui/*.cpp
 	$(CC) imgui/imgui.cpp $(CFLAGS) -o $@
