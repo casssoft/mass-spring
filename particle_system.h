@@ -37,6 +37,7 @@ class ParticleSystem {
   ParticleSystem();
   ~ParticleSystem();
   void Update(double timestep, bool solveWithguess, bool corotational, int groundMode);
+  void onMouseDrag(Eigen::Vector3d origin, Eigen::Vector3d ray, double timestep);
   void onMousePress(Eigen::Vector3d origin, Eigen::Vector3d ray);
 
   float* GetPositions3d(int* size);
@@ -56,7 +57,7 @@ class ParticleSystem {
   void SetupArmadillo();
   void SetupMeshFile(const char*filename);
   void Reset();
-  void SetSpringProperties(double k, double volumeConservation, double c, double grav, double gStiffness);
+  void SetSpringProperties(double k, double volumeConservation, double c, double grav, double gStiffness, double mStiffness);
 
   void GetProfileInfo(double& triplet, double& fromtriplet, double& solve, double& equationSetupTime);
 
@@ -78,7 +79,7 @@ class ParticleSystem {
   std::vector<int> faces;
   std::vector<int> facetotet;
   std::vector<int> outsidePoints;
-  std::vector<int> facesFromOutPoints;
+  std::vector<int> faceToOut;
 
   CollisionSystem* colSys;
 
@@ -86,8 +87,10 @@ class ParticleSystem {
   double volConserve;
   double dampness;
   double groundStiffness;
+  double mouseStiffness;
   double gravity;
   double groundLevel;
+  bool useColSys;
   bool corotational;
   void AddTet(int x1, int x2, int x3, int x4);
   void GetTetP(int i, Particle*& p1, Particle*& p2, Particle*& p3, Particle*& p4);

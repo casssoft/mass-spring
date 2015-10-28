@@ -201,7 +201,7 @@ void Scene::Update(double timestep) {
   if (walkBack) walkvector -= targ;
   if (walkLeft) walkvector += up.cross(targ);
   if (walkRight) walkvector += targ.cross(up);
-  if (walkForward || walkBack || walkLeft || walkRight)
+  if (walkvector.norm() > 0)
     walkvector.normalize();
   pos += walkvector * timestep * 5;
   xpos = pos[0];
@@ -259,13 +259,11 @@ void Scene::GetCameraRay(double x, double y, Eigen::Vector3d* origin, Eigen::Vec
   Eigen::Matrix4f inverse;
   inverse = g_viewMatrix.inverse();
   Eigen::Vector4f preVec;
-  preVec << (2 * x / DDWIDTH) - 1, (2 * y / DDHEIGHT) - 1, 2 * .5 - 1, 1;
+  preVec << (2 * x / DDWIDTH) - 1, 1 - (2 * y / DDHEIGHT), 2 * .5 - 1, 1;
+  (*origin)[0] = xpos;
+  (*origin)[1] = ypos;
+  (*origin)[2] = zpos;
   Eigen::Vector4f ori = inverse * preVec;
-  (*origin)[0] = ori[0];
-  (*origin)[1] = ori[1];
-  (*origin)[2] = ori[2];
-  preVec[2] = 100;
-  ori = inverse * preVec;
   (*ray)[0] = ori[0] - (*origin)[0];
   (*ray)[1] = ori[1] - (*origin)[1];
   (*ray)[2] = ori[2] - (*origin)[2];

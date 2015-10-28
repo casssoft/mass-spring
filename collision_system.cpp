@@ -18,6 +18,7 @@ void CollisionSystem::InitSystem(const std::vector<Eigen::Vector3d>& verts, cons
   if (initialized) {
     ccdQuitModel();
   }
+  initialized = true;
   vecList.clear();
   triList.clear();
   for (int i = 0; i < verts.size(); i++) {
@@ -36,10 +37,10 @@ void CollisionSystem::UpdateVertex(unsigned int index, const Eigen::Vector3d& ve
 }
 void EECallback(unsigned int e1_v1, unsigned e1_v2,
 				unsigned int e2_v1, unsigned int e2_v2, float t) {
-	printf("EE result: e1(%d, %d), e2(%d, %d) @ t=%f\n", e1_v1, e1_v2, e2_v1, e2_v2, t);
+	//printf("EE result: e1(%d, %d), e2(%d, %d) @ t=%f\n", e1_v1, e1_v2, e2_v1, e2_v2, t);
 }
 void VFCallback(unsigned int vid, unsigned int fid, float t) {
-	printf("VF result: v=%d, f=%d @ t=%f\n", vid, fid, t);
+	//printf("VF result: v=%d, f=%d @ t=%f\n", vid, fid, t);
   vToF->push_back(vid);
   vToF->push_back(fid);
 }

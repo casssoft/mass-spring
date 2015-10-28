@@ -152,7 +152,7 @@ int main(int argc, const char **argv) {
   ParticleSystem m;
   double strainSize = 2;
   if (argc >= 4) {
-    m.SetSpringProperties(atof(argv[1]), .4, atof(argv[2]), 9.8f, atof(argv[3]));
+    m.SetSpringProperties(atof(argv[1]), .4, atof(argv[2]), 9.8f, atof(argv[3]), 100);
     if (argc >= 5) {
       strainSize = atof(argv[4]);
     }
@@ -181,28 +181,40 @@ int main(int argc, const char **argv) {
     glfwPollEvents();
     ImGui_ImplGlfw_NewFrame();
 
-    //double mouse_x, mouse_y;
-    //glfwGetCursorPos(window, &mouse_x, &mouse_y);
-    //bool mousePressed = glfwGetMouseButton(window, 0);
-    //if (mousePressed) {
-    //  Eigen::Vector3d origin, ray;
-    //  scene.GetCameraRay(mouse_x, mouse_y, &origin, &ray);
-    //  m.onMousePress(origin, ray);
-    //}
-
-    curTime = glfwGetTime();
     // Update m
     double timestep = scene.GetTimestep();
 
-    m.Update(timestep, solveWithguess, corotational, typeOfGround);
+    double tempTime = 0;
+    if (timestep < .5) {
+      double mouse_x, mouse_y;
+      glfwGetCursorPos(window, &mouse_x, &mouse_y);
+      bool mousePressed = glfwGetMouseButton(window, 0);
+      static bool pressedLastFrame = false;
+      if (mousePressed) {
+        Eigen::Vector3d origin, ray;
+        scene.GetCameraRay(mouse_x, mouse_y, &origin, &ray);
+        if (pressedLastFrame) {
+          m.onMouseDrag(origin, ray, timestep);
+        } else {
+          m.onMousePress(origin, ray);
+          m.onMouseDrag(origin, ray, timestep);
+        }
+        pressedLastFrame = true;
+      } else {
+        pressedLastFrame = false;
+      }
+      curTime = glfwGetTime();
 
-    double tempTime = glfwGetTime();
-    simulatetime += tempTime - curTime;
-    curTime = tempTime;
+      m.Update(timestep, solveWithguess, corotational, typeOfGround);
+
+      tempTime = glfwGetTime();
+      simulatetime += tempTime - curTime;
+      curTime = tempTime;
 
 
-    // Update scene pos
-    scene.Update(timestep);
+      // Update scene pos
+      scene.Update(timestep);
+    }
 
     // Draw
     scene.DrawScene(&m, strainSize, drawSimulation);
@@ -300,6 +312,7 @@ int main(int argc, const char **argv) {
       static float gravity = 9.6f;
       static float strainDisplaySize = strainSize;
       static float groundStiffness = 1000.0f;
+      static float mouseStiffness = 100.0f;
       ImGui::Text("Stiffness (Young's modulus)");
       ImGui::SliderFloat("##stiffness", &stiffness, 0.0f, 10000.0f, "%.3f", 2.0);
       ImGui::Text("Volume Conservation (Poisson's ratio)");
@@ -312,9 +325,11 @@ int main(int argc, const char **argv) {
       ImGui::SliderFloat("##strainSize", &strainDisplaySize, 0.0f, 100.0f, "%.3f", 4.0);
       ImGui::Text("Ground stiffness (size of penalty forces)");
       ImGui::SliderFloat("##groundstiffness", &groundStiffness, 0.0f, 10000.0f);
+      ImGui::Text("Mouse spring stiffness");
+      ImGui::SliderFloat("##mousestiffness", &mouseStiffness, 0.0f, 10000.0f);
 
       if (ImGui::Button("Apply Changes")) {
-        m.SetSpringProperties(stiffness, volumeConservation, damping, gravity, groundStiffness);
+        m.SetSpringProperties(stiffness, volumeConservation, damping, gravity, groundStiffness, mouseStiffness);
         strainSize = strainDisplaySize;
         switch (selected_config) {
           case 0:
