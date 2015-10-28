@@ -1,14 +1,16 @@
 CC=g++
 CFLAGS=-include src/vcincludes.h -Iinc -Isrc
 
-all : libselfccd.a sample/a.out
+all : libselfccd.a
 
 src/%.o : src/%.cpp
 	$(CC) -c $(CFLAGS) $< -o $@
 
-libselfccd.a : src/*.o
-	ar rvs libselfccd.a src/*.o
+wildcard := $(wildcard src/*.cpp)
+objects := $(patsubst src/%.cpp,src/%.o,$(wildcard src/*.cpp))
 
-sample/a.out : libselfccd.a
-	g++ -include ../src/vcincludes.h *.cpp ../libselfccd.a -I../inc -o sample/a.out
+libselfccd.a : $(objects)
+	ar rvs libselfccd.a $(objects)
 
+$(info $$var is [${objects}])
+$(info $$var is [${wildcard}])

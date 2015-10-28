@@ -2,72 +2,8 @@
 #include "GLFW/glfw3.h"
 #include <stdio.h>
 #include <stdlib.h>
-
-#ifndef MACOSX
-#define glCreateShader DDglCreateShader
-#define glShaderSource DDglShaderSource
-#define glCompileShader DDglCompileShader
-#define glGetShaderiv DDglGetShaderiv
-#define glGetShaderInfoLog DDglGetShaderInfoLog
-#define glDeleteShader DDglDeleteShader
-#define glCreateProgram DDglCreateProgram
-#define glAttachShader DDglAttachShader
-#define glLinkProgram DDglLinkProgram
-#define glGetProgramiv DDglGetProgramiv
-#define glGetProgramInfoLog DDglGetProgramInfoLog
-#define glUseProgram DDglUseProgram
-#define glDeleteProgram DDglDeleteProgram
-#define glGetUniformLocation DDglGetUniformLocation
-#define glUniform1i DDglUniform1i
-#define glGetAttribLocation DDglGetAttribLocation
-#define glEnableVertexAttribArray DDglEnableVertexAttribArray
-#define glGenBuffers DDglGenBuffers
-#define glBindBuffer DDglBindBuffer
-#define glBufferData DDglBufferData
-#define glBufferSubData DDglBufferSubData
-#define glUniform2f DDglUniform2f
-#define glVertexAttribPointer DDglVertexAttribPointer
-#define glUniformMatrix4fv DDglUniformMatrix4fv
-#define glUniform3f DDglUniform3f
-
-PFNGLCREATESHADERPROC glCreateShader = NULL;
-PFNGLSHADERSOURCEPROC glShaderSource = NULL;
-PFNGLCOMPILESHADERPROC glCompileShader = NULL;
-PFNGLGETSHADERIVPROC glGetShaderiv = NULL;
-PFNGLGETSHADERINFOLOGPROC glGetShaderInfoLog = NULL;
-PFNGLDELETESHADERPROC glDeleteShader = NULL;
-PFNGLCREATEPROGRAMPROC glCreateProgram = NULL;
-PFNGLATTACHSHADERPROC glAttachShader = NULL;
-PFNGLLINKPROGRAMPROC glLinkProgram = NULL;
-PFNGLGETPROGRAMIVPROC glGetProgramiv = NULL;
-PFNGLGETPROGRAMINFOLOGPROC glGetProgramInfoLog = NULL;
-PFNGLUSEPROGRAMPROC glUseProgram = NULL;
-PFNGLDELETEPROGRAMPROC glDeleteProgram = NULL;
-PFNGLGETUNIFORMLOCATIONPROC glGetUniformLocation = NULL;
-PFNGLUNIFORM1IPROC glUniform1i = NULL;
-PFNGLGETATTRIBLOCATIONPROC glGetAttribLocation = NULL;
-PFNGLENABLEVERTEXATTRIBARRAYPROC glEnableVertexAttribArray = NULL;
-PFNGLGENBUFFERSPROC glGenBuffers = NULL;
-PFNGLBINDBUFFERPROC glBindBuffer = NULL;
-PFNGLBUFFERDATAPROC glBufferData = NULL;
-PFNGLBUFFERSUBDATAPROC glBufferSubData = NULL;
-PFNGLUNIFORM2FPROC glUniform2f = NULL;
-PFNGLVERTEXATTRIBPOINTERPROC glVertexAttribPointer = NULL;
-PFNGLUNIFORMMATRIX4FVPROC glUniformMatrix4fv = NULL;
-PFNGLUNIFORM3FPROC glUniform3f = NULL;
-
-#define GL_ARRAY_BUFFER                   0x8892
-#define GL_STATIC_DRAW                    0x88E4
-#define GL_FRAGMENT_SHADER                0x8B30
-#define GL_VERTEX_SHADER                  0x8B31
-#define GL_COMPILE_STATUS                 0x8B81
-#define GL_LINK_STATUS                    0x8B82
-#define GL_INFO_LOG_LENGTH                0x8B84
-#define GL_TEXTURE0                       0x84C0
-#define GL_BGRA                           0x80E1
-#define GL_ELEMENT_ARRAY_BUFFER           0x8893
-#define GL_VERTEX_ARRAY_BINDING           34229
-#endif
+#define IN_DRAW_DELEGATE_CPP__
+#include "opengl_defines.h"
 
 #define STARTING_SHEETS 16
 char * vertexSource =
@@ -108,6 +44,7 @@ bool DrawDelegate::SetupOpenGL() {
         glDeleteShader = (PFNGLDELETESHADERPROC) glfwGetProcAddress( "glDeleteShader" );
         glCreateProgram = (PFNGLCREATEPROGRAMPROC) glfwGetProcAddress( "glCreateProgram" );
         glAttachShader = (PFNGLATTACHSHADERPROC) glfwGetProcAddress( "glAttachShader" );
+        glDetachShader = (PFNGLDETACHSHADERPROC) glfwGetProcAddress( "glDetachShader" );
         glLinkProgram = (PFNGLLINKPROGRAMPROC) glfwGetProcAddress( "glLinkProgram" );
         glGetProgramiv = (PFNGLGETPROGRAMIVPROC) glfwGetProcAddress( "glGetProgramiv" );
         glGetProgramInfoLog = (PFNGLGETPROGRAMINFOLOGPROC) glfwGetProcAddress( "glGetProgramInfoLog" );
@@ -120,17 +57,19 @@ bool DrawDelegate::SetupOpenGL() {
 		glGenBuffers = (PFNGLGENBUFFERSPROC) glfwGetProcAddress("glGenBuffers");
 		glBindBuffer = (PFNGLBINDBUFFERPROC) glfwGetProcAddress("glBindBuffer");
 		glBufferData = (PFNGLBUFFERDATAPROC) glfwGetProcAddress("glBufferData");
+		glDeleteBuffers = (PFNGLDELETEBUFFERSPROC) glfwGetProcAddress("glDeleteBuffers");
 		glBufferSubData = (PFNGLBUFFERSUBDATAPROC) glfwGetProcAddress("glBufferSubData");
 		glUniform2f = (PFNGLUNIFORM2FPROC) glfwGetProcAddress("glUniform2f");
 		glVertexAttribPointer = (PFNGLVERTEXATTRIBPOINTERPROC) glfwGetProcAddress("glVertexAttribPointer");
 		glUniformMatrix4fv = (PFNGLUNIFORMMATRIX4FVPROC) glfwGetProcAddress("glUniformMatrix4fv");
 		glUniform3f = (PFNGLUNIFORM3FPROC) glfwGetProcAddress("glUniform3f");
+		glBlendEquationSeparate = (PFNGLBLENDEQUATIONSEPARATEPROC) glfwGetProcAddress("glBlendEquationSeparate");
 
 		if (!(glActiveTexture && glCreateShader && glShaderSource && glCompileShader &&
 		glGetShaderiv && glGetShaderInfoLog && glDeleteShader && glCreateProgram &&
-		glAttachShader && glLinkProgram && glGetProgramiv && glGetProgramInfoLog &&
+		glAttachShader &&  glDetachShader && glLinkProgram && glGetProgramiv && glGetProgramInfoLog &&
 		glUseProgram && glDeleteProgram && glGetUniformLocation && glUniform1i &&
-		glGetAttribLocation && glGenBuffers && glBindBuffer && glBufferData && glEnableVertexAttribArray &&
+		glGetAttribLocation && glGenBuffers && glBindBuffer && glBufferData && glDeleteBuffers && glEnableVertexAttribArray &&
 		glUniform2f && glVertexAttribPointer && glUniformMatrix4fv && glUniform3f))
 			return 0;
 #endif

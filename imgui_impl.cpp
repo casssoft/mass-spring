@@ -17,6 +17,7 @@
 #endif
 
 #include <stdio.h>
+#include "opengl_defines.h"
 // Data
 static GLFWwindow*  g_Window = NULL;
 static double       g_Time = 0.0f;
