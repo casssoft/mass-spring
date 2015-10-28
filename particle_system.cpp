@@ -18,6 +18,7 @@ ParticleSystem::ParticleSystem() {
   mouseStiffness = 100;
   colSys = new CollisionSystem();
   useColSys = false;
+  colRolBack = false;
 }
 
 ParticleSystem::~ParticleSystem() {
@@ -33,16 +34,110 @@ void ParticleSystem::Update(double timestep, bool solveWithguess, bool coro, int
 
   if (useColSys) {
     for (int i = 0; i < outsidePoints.size(); i++) {
-      if (outsidePoints[i] > 0) {
+      if (outsidePoints[i] >= 0) {
         colSys->UpdateVertex(i, particles[outsidePoints[i]].x);
       }
     }
     std::vector<unsigned int> vertexToFace;
-    colSys->GetCollisions(vertexToFace);
-    if (vertexToFace.size() > 20) {
-      //printf("Too many collisions\n");
-      //exit(0);
-    }
+    std::vector<unsigned int> edgeToEdge;
+    std::vector<float> veToFaTime;
+    std::vector<float> edToEdTime;
+    colSys->GetCollisions(vertexToFace, edgeToEdge, veToFaTime, edToEdTime);
+    if (colRolBack) {
+      int colCount = 0;
+      int earliestIndex = 0;
+      double curTimeStep = timestep;
+      while(earliestIndex >= 0) {
+        //printf("Start loop\n");
+        earliestIndex = -1;
+        double eTime = 0;
+        for (int i = 0; i < vertexToFace.size(); i += 2) {
+          // calculate normal of tri
+          int p1_i, p2_i, p3_i, v1_i;
+          p1_i = outsidePoints[faceToOut[3 * vertexToFace[i + 1]]];
+          p2_i = outsidePoints[faceToOut[3 * vertexToFace[i + 1] + 1]];
+          p3_i = outsidePoints[faceToOut[3 * vertexToFace[i + 1] + 2]];
+          v1_i = outsidePoints[vertexToFace[i]];
+          if (p1_i < 0 && v1_i >= 0) {
+            if (earliestIndex == -1 || veToFaTime[i/2] < eTime) {
+              eTime = veToFaTime[i/2];
+              earliestIndex = i;
+              //printf("Found early collision\n");
+            }
+          }
+        }
+        if (earliestIndex >= 0) {
+            Particle *p1, *p2, *p3, *v1;
+            int p1_i, p2_i, p3_i, v1_i;
+            p1_i = outsidePoints[faceToOut[3 * vertexToFace[earliestIndex + 1]]];
+            p2_i = outsidePoints[faceToOut[3 * vertexToFace[earliestIndex + 1] + 1]];
+            p3_i = outsidePoints[faceToOut[3 * vertexToFace[earliestIndex + 1] + 2]];
+            v1_i = outsidePoints[vertexToFace[earliestIndex]];
+            GetPointP(p1_i, p1);
+            GetPointP(p2_i, p2);
+            GetPointP(p3_i, p3);
+            GetPointP(v1_i, v1);
+            Eigen::Vector3d temp1, temp2;
+            temp1 = p2->x - p1->x;
+            temp2 = p3->x - p1->x;
+            temp1 = temp1.cross(temp2);
+            temp1.normalize();
+            temp1;
+            // Project vertex onto plane
+            double d = p1->x.dot(temp1);
+            double v = (d - (v1->x.dot(temp1)));
+            if (v < 0) {
+              //printf("inside\n");
+            }
+            Eigen::Vector3d planePoint = v1->x + v * temp1;
+            //printf("Original point: %f, %f, %f\n", v1->x[0], v1->x[1], v1->x[2]);
+            //printf("Plane point: %f, %f, %f\n", planePoint[0], planePoint[1], planePoint[2]);
+            //printf("V: %f\n", v);
+            //printf("temp1: %f, %f, %f\n", temp1[0], temp1[1], temp1[2]);
+            planePoint +=  temp1 * .05 * 60 * curTimeStep * (1 + .0001 * colCount);
+
+            for (int i = 0; i < particles.size(); i++) {
+              Eigen::Vector3d temp;
+              temp = eTime * particles[i].x + (1 - eTime) * prevPos[i];
+              particles[i].x = temp;
+              temp = eTime * particles[i].v + (1 - eTime) * prevVel[i];
+              particles[i].v = temp;
+              temp = eTime * particles[i].f + (1 - eTime) * prevFEXT[i];
+              particles[i].f = temp;
+            }
+            v1->x[0] = planePoint[0];
+            v1->x[1] = planePoint[1];
+            v1->x[2] = planePoint[2];
+            v1->v[0] = 0;
+            v1->v[1] = 0;
+            v1->v[2] = 0;
+
+            for (int i = 0; i < outsidePoints.size(); i++) {
+              if (outsidePoints[i] >= 0) {
+                colSys->UpdateVertex(i, particles[outsidePoints[i]].x);
+              }
+            }
+            colSys->GetCollisions(vertexToFace, edgeToEdge, veToFaTime, edToEdTime);
+            vertexToFace.clear();
+            edgeToEdge.clear();
+            veToFaTime.clear();
+            edToEdTime.clear();
+            //printf("Doing another round of euler with time step %f\n", curTimeStep * (1 - eTime));
+            ImplicitEulerSparse(curTimeStep * (1 - eTime));
+            curTimeStep -= eTime * curTimeStep;
+            for (int i = 0; i < outsidePoints.size(); i++) {
+              if (outsidePoints[i] >= 0) {
+                colSys->UpdateVertex(i, particles[outsidePoints[i]].x);
+              }
+            }
+            colSys->GetCollisions(vertexToFace, edgeToEdge, veToFaTime, edToEdTime);
+            colCount += 1;
+            //fprintf(stderr, "c: %i curTimeStep: %f ", colCount, curTimeStep);
+            if (colCount > 60) break;
+        }
+      }
+      fprintf(stderr, "ColCount: %i\n", colCount);
+    } else {
     for (int i = 0; i < vertexToFace.size(); i += 2) {
       // calculate normal of tri
       Particle *p1, *p2, *p3, *v1;
@@ -86,8 +181,59 @@ void ParticleSystem::Update(double timestep, bool solveWithguess, bool coro, int
         colSys->UpdateVertex(vertexToFace[i], v1->x);
       }
     }
+    for (int i = 0; i < edgeToEdge.size(); i += 4) {
+      // calculate normal of tri
+      Particle *p1, *p2, *p3, *p4;
+      int p1_i, p2_i, p3_i, p4_i;
+      p1_i = outsidePoints[edgeToEdge[i]];
+      p2_i = outsidePoints[edgeToEdge[i + 1]];
+      p3_i = outsidePoints[edgeToEdge[i + 2]];
+      p4_i = outsidePoints[edgeToEdge[i + 3]];
+      // is one edge fixed points and the other not?
+      bool switched = false;
+      if (p1_i < 0 && p2_i < 0 && p3_i >= 0 && p4_i >= 0) {
+        int temp = p1_i;
+        p1_i = p3_i;
+        p3_i = temp;
+
+        temp = p2_i;
+        p2_i = p4_i;
+        p4_i = temp;
+        switched = true;
+      }
+
+      if (p1_i >= 0 && p2_i >= 0 && p3_i < 0 && p4_i < 0) {
+        GetPointP(p1_i, p1);
+        GetPointP(p2_i, p2);
+        GetPointP(p3_i, p3);
+        GetPointP(p4_i, p4);
+
+        // Get col point and put it right before?
+        //Eigen::Vector3d newPos;
+        //float time = edToEdTime[i/4];
+        //if (time < .2) time = 0;
+        //else time -= .2;
+        //time = 0;
+        //newPos = p1->x * time + prevPos[p1_i] * (1 - time);
+        //p1->x = newPos;
+        //newPos = p2->x * time + prevPos[p2_i] * (1 - time);
+        //p2->x = newPos;
+        //p1->v << 0,0,0;
+        //p2->v << 0,0,0;
+        //if (switched) {
+        //  colSys->UpdateVertex(edgeToEdge[i + 2], p1->x);
+        //  colSys->UpdateVertex(edgeToEdge[i + 3], p2->x);
+        //} else {
+        //  colSys->UpdateVertex(edgeToEdge[i], p1->x);
+        //  colSys->UpdateVertex(edgeToEdge[i + 1], p2->x);
+        //}
+      }
+    }
     vertexToFace.clear();
-    colSys->GetCollisions(vertexToFace);
+    edgeToEdge.clear();
+    veToFaTime.clear();
+    edToEdTime.clear();
+    colSys->GetCollisions(vertexToFace, edgeToEdge, veToFaTime, edToEdTime);
 
 //Eigen::Vector3d newVelocity = (p1->v * bary[0] + p2->v * bary[1] + p3->v * bary[2]) / 2;
 //v1->x = planePoint;
@@ -144,8 +290,8 @@ void ParticleSystem::Update(double timestep, bool solveWithguess, bool coro, int
   //  }
   //}
   }
+  }
   // Optionally make things bounce of the ground
-  groundMode = 0;
   switch (groundMode) {
     case 0:
       break;
@@ -797,6 +943,9 @@ void ParticleSystem::SetupSingleSpring() {
 }
 
 void ParticleSystem::CopyIntoStartPos() {
+  prevPos.resize(particles.size());
+  prevVel.resize(particles.size());
+  prevFEXT.resize(particles.size());
   startPos.clear();
   for(int i = 0; i < particles.size(); ++i) {
     startPos.emplace_back();
@@ -912,7 +1061,7 @@ void ParticleSystem::SetupMeshFile(const char* filename) {
     particles.emplace_back();
     particles[i].x << points[i*3], points[i*3 + 1], points[i*3 + 2];
     particles[i].v << 0, 0, 0;
-    particles[i].iMass = psize/20.0;
+    particles[i].iMass = (.5 * psize + 50.0)/20.0;//psize/20.0;
     if (points[i*3 + 1] > lowestpoint) {
       lowestpoint = points[i*3+1];
     }
@@ -931,47 +1080,123 @@ void ParticleSystem::SetupMeshFile(const char* filename) {
   for (int i = 0; i < (tets.size()/4); ++i) {
     AddTet(tets[i*4], tets[i*4+1], tets[i*4 + 2], tets[i*4 + 3]);
   }
-  Particle *g1,* g2,* g3, * g4;
+  //Particle *g1,* g2,* g3, * g4;
+  //g1 = new Particle();
+  //g2 = new Particle();
+  //g3 = new Particle();
+  //g4 = new Particle();
+  //g1->x << 15, lowestpoint + 1, -10;
+  //g1->v << 0, 0, 0;
+  //g2->x << 0, lowestpoint + 1, 30;
+  //g2->v << 0, 0, 0;
+  //g3->x << -15, lowestpoint + 1, -10;
+  //g3->v << 0, 0,0;
+  //g4->x << 0, lowestpoint + 3, 0;
+  //g4->v << 0,0,0;
+  //fixed_points.push_back(*g1);
+  //fixed_points.push_back(*g2);
+  //fixed_points.push_back(*g3);
+  //fixed_points.push_back(*g4);
+  //delete g1;
+  //delete g2;
+  //delete g3;
+  //delete g4;
+  //outsidePoints.push_back(-1 * fixed_points.size());
+  //outsidePoints.push_back(-1 * fixed_points.size() + 1);
+  //outsidePoints.push_back(-1 * fixed_points.size() + 2);
+  //outsidePoints.push_back(-1 * fixed_points.size() + 3);
+
+  //// top tri
+  //faces.push_back(-1 * fixed_points.size() + 3);
+  //faces.push_back(-1 * fixed_points.size() + 2);
+  //faces.push_back(-1 * fixed_points.size() + 1);
+  //
+  //faces.push_back(-1 * fixed_points.size() + 2);
+  //faces.push_back(-1 * fixed_points.size() + 3);
+  //faces.push_back(-1 * fixed_points.size());
+
+  //faces.push_back(-1 * fixed_points.size() + 1);
+  //faces.push_back(-1 * fixed_points.size() + 2);
+  //faces.push_back(-1 * fixed_points.size());
+  //
+  //faces.push_back(-1 * fixed_points.size() + 3);
+  //faces.push_back(-1 * fixed_points.size() + 1);
+  //faces.push_back(-1 * fixed_points.size());
+  Particle *g1,* g2,* g3, * g4, *g5, *g6, *g7, *g8;
   g1 = new Particle();
   g2 = new Particle();
   g3 = new Particle();
   g4 = new Particle();
-  g1->x << 15, lowestpoint + 1, -10;
+  g5 = new Particle();
+  g6 = new Particle();
+  g7 = new Particle();
+  g8 = new Particle();
+  g1->x << 2, lowestpoint + 1, 2;
   g1->v << 0, 0, 0;
-  g2->x << 0, lowestpoint + 1, 30;
+  g2->x << -2, lowestpoint + 1, 2;
   g2->v << 0, 0, 0;
-  g3->x << -15, lowestpoint + 1, -10;
-  g3->v << 0, 0,0;
-  g4->x << 0, lowestpoint + 3, 0;
-  g4->v << 0,0,0;
-  fixed_points.emplace_back(*g1);
-  fixed_points.emplace_back(*g2);
-  fixed_points.emplace_back(*g3);
-  fixed_points.emplace_back(*g4);
-  outsidePoints.push_back(-1 * fixed_points.size());
-  outsidePoints.push_back(-1 * fixed_points.size() + 1);
-  outsidePoints.push_back(-1 * fixed_points.size() + 2);
-  outsidePoints.push_back(-1 * fixed_points.size() + 3);
+  g3->x << -2, lowestpoint + 1, -2;
+  g3->v << 0, 0, 0;
+  g4->x << 2, lowestpoint + 1, -2;
+  g4->v << 0, 0, 0;
 
-  // top tri
-  faces.push_back(-1 * fixed_points.size() + 3);
-  faces.push_back(-1 * fixed_points.size() + 2);
-  faces.push_back(-1 * fixed_points.size() + 1);
-  
-  faces.push_back(-1 * fixed_points.size() + 3);
-  faces.push_back(-1 * fixed_points.size() + 2);
-  faces.push_back(-1 * fixed_points.size());
 
-  faces.push_back(-1 * fixed_points.size() + 2);
-  faces.push_back(-1 * fixed_points.size() + 1);
-  faces.push_back(-1 * fixed_points.size());
-  
-  faces.push_back(-1 * fixed_points.size() + 1);
-  faces.push_back(-1 * fixed_points.size() + 3);
-  faces.push_back(-1 * fixed_points.size());
+  g5->x << 2, lowestpoint + 5, 2;
+  g5->v << 0, 0, 0;
+  g6->x << -2, lowestpoint + 5, 2;
+  g6->v << 0, 0, 0;
+  g7->x << -2, lowestpoint + 5, -2;
+  g7->v << 0, 0, 0;
+  g8->x << 2, lowestpoint + 5, -2;
+  g8->v << 0, 0, 0;
+
+  fixed_points.push_back(*g1);
+  fixed_points.push_back(*g2);
+  fixed_points.push_back(*g3);
+  fixed_points.push_back(*g4);
+  fixed_points.push_back(*g5);
+  fixed_points.push_back(*g6);
+  fixed_points.push_back(*g7);
+  fixed_points.push_back(*g8);
+  delete g1;
+  delete g2;
+  delete g3;
+  delete g4;
+  delete g5;
+  delete g6;
+  delete g7;
+  delete g8;
+  outsidePoints.push_back(-1 * fixed_points.size()); // 1, 3, -1
+  outsidePoints.push_back(-1 * fixed_points.size() + 1); // -1, 3 -1
+  outsidePoints.push_back(-1 * fixed_points.size() + 2); // -1, 3, 1
+  outsidePoints.push_back(-1 * fixed_points.size() + 3); // 1, 3, 1
+  outsidePoints.push_back(-1 * fixed_points.size() + 4); // 1, 1, -1
+  outsidePoints.push_back(-1 * fixed_points.size() + 5); // -1, 1, -1
+  outsidePoints.push_back(-1 * fixed_points.size() + 6); // -1, 1, 1
+  outsidePoints.push_back(-1 * fixed_points.size() + 7); // 1, 1, 1
+
+  //  6 ____7
+  //  / \  / \ <--- 3
+  //2/___ \5___\4
+  //  \   /\   /
+  //   1\/___\/0
+  //
+  //
+#define F_PUSH(num) faces.push_back(-1 * fixed_points.size() + num);
+#define F_SIDE(v1, v2, v3, v4) \
+  F_PUSH(v1) F_PUSH(v2) F_PUSH(v4) \
+  F_PUSH(v2) F_PUSH(v3) F_PUSH(v4)
+
+  F_SIDE(7, 6, 5, 4) //top
+  F_SIDE(4, 5, 1, 0)//front
+  F_SIDE(0, 1, 2, 3) //bottom
+  F_SIDE(6, 7, 3, 2) // back
+  F_SIDE(7, 4, 0, 3) // right side
+  F_SIDE(5, 6, 2, 1) // left side
+
   CopyIntoStartPos();
   CreateOutsidePointListFromFaces();
-  groundLevel = lowestpoint + 1;
+  groundLevel = lowestpoint + 5;
   delete[] points;
   printf("Number of faces%d\n", faces.size()/3);
 }
@@ -1037,13 +1262,14 @@ void ParticleSystem::CalculateParticleMass(int i, float springMass) {
 }
 
 
-void ParticleSystem::SetSpringProperties(double k, double vol, double c, double grav, double gStiffness, double mStiffness) {
+void ParticleSystem::SetSpringProperties(double k, double vol, double c, double grav, double gStiffness, double mStiffness, bool useRollback) {
   stiffness = k;
   volConserve = vol;
   dampness = c;
   gravity = grav;
   groundStiffness = gStiffness;
   mouseStiffness = mStiffness;
+  colRolBack = useRollback;
 }
 
 void ParticleSystem::ComputeForces() {}

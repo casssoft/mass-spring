@@ -5,6 +5,13 @@
 static vec3f_list vecList;
 static tri_list triList;
 static std::vector<unsigned int>* vToF = NULL;
+static std::vector<float>* vToFTime = NULL;
+static float earlyC = 1;
+static int earlyCType = 0;
+static int earlyCIndex = 0;
+
+static std::vector<unsigned int>* eToE = NULL;
+static std::vector<float>* eToETime = NULL;
 static bool initialized = false;
 
 CollisionSystem::CollisionSystem() {}
@@ -37,16 +44,36 @@ void CollisionSystem::UpdateVertex(unsigned int index, const Eigen::Vector3d& ve
 }
 void EECallback(unsigned int e1_v1, unsigned e1_v2,
 				unsigned int e2_v1, unsigned int e2_v2, float t) {
+  if (t < earlyC) {
+    earlyCType = 1;
+    earlyCIndex = eToE->size();
+    earlyC = t;
+  }
+  eToETime->push_back(t);
+  eToE->push_back(e1_v1);
+  eToE->push_back(e1_v2);
+  eToE->push_back(e2_v1);
+  eToE->push_back(e2_v2);
 	//printf("EE result: e1(%d, %d), e2(%d, %d) @ t=%f\n", e1_v1, e1_v2, e2_v1, e2_v2, t);
 }
 void VFCallback(unsigned int vid, unsigned int fid, float t) {
 	//printf("VF result: v=%d, f=%d @ t=%f\n", vid, fid, t);
+  if (t < earlyC) {
+    earlyCType = 0;
+    earlyCIndex = vToF->size();
+    earlyC = t;
+  }
+  vToFTime->push_back(t);
   vToF->push_back(vid);
   vToF->push_back(fid);
 }
 
-void CollisionSystem::GetCollisions(std::vector<unsigned int>& vertexToFace) {
+void CollisionSystem::GetCollisions(std::vector<unsigned int>& vertexToFace, std::vector<unsigned int>& edgeToEdge, std::vector<float>& veToFaTime, std::vector<float>& edToEdTime) {
   vToF = &vertexToFace;
+  eToE = &edgeToEdge;
+  vToFTime = &veToFaTime;
+  eToETime = &edToEdTime;
+  earlyC = 1;
   ccdUpdateVtxs(vecList);
   ccdSetEECallback(EECallback);
   ccdSetVFCallback(VFCallback);

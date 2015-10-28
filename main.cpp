@@ -46,6 +46,7 @@ void error_callback(int error, const char* description) {
 bool drawSimulation = true;
 bool solveWithguess = true;
 bool corotational = true;
+bool fByF = false; //frame by frame mode
 int typeOfGround = 5;
 Scene* scene_p;
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
@@ -101,6 +102,9 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
         typeOfGround++;
         printf("Type of ground : %i\n", typeOfGround);
         break;
+      case 'F':
+        fByF = !fByF;
+        break;
     }
   } else if (action == GLFW_RELEASE) {
     switch(key) {
@@ -152,7 +156,7 @@ int main(int argc, const char **argv) {
   ParticleSystem m;
   double strainSize = 2;
   if (argc >= 4) {
-    m.SetSpringProperties(atof(argv[1]), .4, atof(argv[2]), 9.8f, atof(argv[3]), 100);
+    m.SetSpringProperties(atof(argv[1]), .4, atof(argv[2]), 9.8f, atof(argv[3]), 1000, false);
     if (argc >= 5) {
       strainSize = atof(argv[4]);
     }
@@ -185,7 +189,9 @@ int main(int argc, const char **argv) {
     double timestep = scene.GetTimestep();
 
     double tempTime = 0;
-    if (timestep < .5) {
+    double realTimeStep = timestep;
+    if (timestep < .5 && !fByF || fByF && frames % 5 == 0 &&glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS) {
+      if (fByF) timestep = 1.0/60.0;
       double mouse_x, mouse_y;
       glfwGetCursorPos(window, &mouse_x, &mouse_y);
       bool mousePressed = glfwGetMouseButton(window, 0);
@@ -212,9 +218,9 @@ int main(int argc, const char **argv) {
       curTime = tempTime;
 
 
-      // Update scene pos
-      scene.Update(timestep);
     }
+    // Update scene pos
+    scene.Update(realTimeStep);
 
     // Draw
     scene.DrawScene(&m, strainSize, drawSimulation);
@@ -312,7 +318,7 @@ int main(int argc, const char **argv) {
       static float gravity = 9.6f;
       static float strainDisplaySize = strainSize;
       static float groundStiffness = 1000.0f;
-      static float mouseStiffness = 100.0f;
+      static float mouseStiffness = 1000.0f;
       ImGui::Text("Stiffness (Young's modulus)");
       ImGui::SliderFloat("##stiffness", &stiffness, 0.0f, 10000.0f, "%.3f", 2.0);
       ImGui::Text("Volume Conservation (Poisson's ratio)");
@@ -327,9 +333,11 @@ int main(int argc, const char **argv) {
       ImGui::SliderFloat("##groundstiffness", &groundStiffness, 0.0f, 10000.0f);
       ImGui::Text("Mouse spring stiffness");
       ImGui::SliderFloat("##mousestiffness", &mouseStiffness, 0.0f, 10000.0f);
+      static bool useRollback = false;
+      ImGui::Checkbox("Use rollback col system?", &useRollback);
 
       if (ImGui::Button("Apply Changes")) {
-        m.SetSpringProperties(stiffness, volumeConservation, damping, gravity, groundStiffness, mouseStiffness);
+        m.SetSpringProperties(stiffness, volumeConservation, damping, gravity, groundStiffness, mouseStiffness, useRollback);
         strainSize = strainDisplaySize;
         switch (selected_config) {
           case 0:

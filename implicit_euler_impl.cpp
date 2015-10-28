@@ -233,7 +233,6 @@ void ParticleSystem::ImplicitEulerSparse(double timestep) {
     f_ext[i * 3] = particles[i].f[0];
     f_ext[i * 3 + 1] = gravity/particles[i].iMass + particles[i].f[1];
     f_ext[i * 3 + 2] = particles[i].f[2];
-    particles[i].f << 0,0,0;
     masstriplet.push_back(Eigen::Triplet<double>(i*3,i*3,1/particles[i].iMass));
     masstriplet.push_back(Eigen::Triplet<double>(i*3+1,i*3+1,1/particles[i].iMass));
     masstriplet.push_back(Eigen::Triplet<double>(i*3+2,i*3+2,1/particles[i].iMass));
@@ -266,6 +265,11 @@ void ParticleSystem::ImplicitEulerSparse(double timestep) {
   hasPrev = true;
 
   for (int i = 0; i < particles.size(); i++) {
+    prevFEXT[i] = particles[i].f;
+    prevVel[i] = particles[i].v;
+    prevPos[i] = particles[i].x;
+
+    particles[i].f << 0,0,0;
     particles[i].v[0] = newv[i * 3];
     particles[i].v[1] = newv[i * 3 + 1];
     particles[i].v[2] = newv[i * 3 + 2];

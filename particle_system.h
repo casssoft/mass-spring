@@ -57,7 +57,7 @@ class ParticleSystem {
   void SetupArmadillo();
   void SetupMeshFile(const char*filename);
   void Reset();
-  void SetSpringProperties(double k, double volumeConservation, double c, double grav, double gStiffness, double mStiffness);
+  void SetSpringProperties(double k, double volumeConservation, double c, double grav, double gStiffness, double mStiffness, bool useRollback);
 
   void GetProfileInfo(double& triplet, double& fromtriplet, double& solve, double& equationSetupTime);
 
@@ -80,6 +80,9 @@ class ParticleSystem {
   std::vector<int> facetotet;
   std::vector<int> outsidePoints;
   std::vector<int> faceToOut;
+  std::vector<Eigen::Vector3d> prevPos;
+  std::vector<Eigen::Vector3d> prevVel;
+  std::vector<Eigen::Vector3d> prevFEXT;
 
   CollisionSystem* colSys;
 
@@ -92,6 +95,7 @@ class ParticleSystem {
   double groundLevel;
   bool useColSys;
   bool corotational;
+  bool colRolBack;
   void AddTet(int x1, int x2, int x3, int x4);
   void GetTetP(int i, Particle*& p1, Particle*& p2, Particle*& p3, Particle*& p4);
   void GetPointP(int i, Particle*& x1);
