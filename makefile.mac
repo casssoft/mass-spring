@@ -1,14 +1,14 @@
 CC=g++
 
-CFLAGS= -pipe -c -DNDEBUG -DMACOSX -I../ -Iimgui -Iself-ccd/inc -std=c++11  -Wno-write-strings -O2
+CFLAGS= -pipe -c -DNDEBUG -DMACOSX -DCOLLISION_PQP -I../ -Iimgui -Iself-ccd/inc -IPQP/include -std=c++11  -Wno-write-strings -O2
 
-LIBS= -pipe libglfw3.a libtet.a self-ccd/libselfccd.a -framework Cocoa -framework OpenGL -framework IOKit -framework CoreVideo -O2
+LIBS= -pipe libglfw3.a libtet.a self-ccd/libselfccd.a PQP/lib/libPQP.a -framework Cocoa -framework OpenGL -framework IOKit -framework CoreVideo -O2
 STATICOPTIONS= -static-libgcc -static-libstdc++
 EXE=spring
 
 
 OBJSIMGUI=imgui.o imgui_draw.o imgui_impl.o
-OBJS=main.o draw_delegate.o particle_system.o meshgen.o scene.o implicit_euler_impl.o collision_system.o
+OBJS=main.o draw_delegate.o particle_system.o meshgen.o scene.o implicit_euler_impl.o collision_system.o collision_response.o collision_system_pqp.o
 
 
 build : $(EXE)
@@ -39,6 +39,9 @@ scene.o : scene.cpp scene.h draw_delegate.h particle_system.h
 collision_system.o: collision_system.cpp collision_system.h
 	$(CC) collision_system.cpp $(CFLAGS) -o $@
 
+collision_system_pqp.o: collision_system_pqp.cpp collision_system_pqp.h
+	$(CC) collision_system_pqp.cpp $(CFLAGS) -o $@
+
 imgui.o : imgui/*.h imgui/*.cpp
 	$(CC) imgui/imgui.cpp $(CFLAGS) -o $@
 
@@ -47,3 +50,7 @@ imgui_draw.o : imgui/*.h imgui/*.cpp
 
 imgui_impl.o : imgui_impl.cpp imgui_impl.h imgui/imgui.h
 	$(CC) imgui_impl.cpp $(CFLAGS) -o $@
+
+collision_response.o: collision_response.cpp collision_system.h particle_system.h collision_system_pqp.h
+	$(CC) collision_response.cpp $(CFLAGS) -o $@
+

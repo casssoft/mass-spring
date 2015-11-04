@@ -110,10 +110,10 @@ PQP_Model::BeginModel(int n)
 
   if (build_state != PQP_BUILD_STATE_EMPTY)
   {
-    fprintf(stderr,
-            "PQP Warning! Called BeginModel() on a PQP_Model that \n"
-            "was not empty. This model was cleared and previous\n"
-            "triangle additions were lost.\n");
+    //fprintf(stderr,
+    //        "PQP Warning! Called BeginModel() on a PQP_Model that \n"
+    //        "was not empty. This model was cleared and previous\n"
+    //        "triangle additions were lost.\n");
     build_state = PQP_BUILD_STATE_BEGUN;
     return PQP_ERR_BUILD_OUT_OF_SEQUENCE;
   }

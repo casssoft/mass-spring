@@ -1,14 +1,15 @@
-#ifndef COLLISION_SYSTEM_H__
-#define COLLISION_SYSTEM_H__
+#ifndef COLLISION_SYSTEM_PQP_H__
+#define COLLISION_SYSTEM_PQP_H__
 #include "../Eigen/Core"
 #include <vector>
 
-class CollisionSystem {
+class CollisionSystemPQP {
  public:
-  CollisionSystem();
-  ~CollisionSystem();
-  void GetCollisions(std::vector<unsigned int>& vertexToFace, std::vector<unsigned int>& edgeToEdge, std::vector<float>& veToFaTime, std::vector<float>& edToEdTime);
-  void UpdateVertex(unsigned int index, const Eigen::Vector3d& vec);
-  void InitSystem(const std::vector<Eigen::Vector3d>& verts, const std::vector<int>& tris);
+  CollisionSystemPQP();
+  ~CollisionSystemPQP();
+  void InitGroundModel(const std::vector<Eigen::Vector3d>& verts, const std::vector<int>& tris);
+  void InitObjectModel(const std::vector<Eigen::Vector3d>& verts, const std::vector<int>& tris);
+
+  void GetCollisions(std::vector<unsigned int>& objectVertexToFace, std::vector<unsigned int>& edgeToEdge, std::vector<double>& edgeU, std::vector<Eigen::Vector3d>& moveEdge);
 };
 #endif

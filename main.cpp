@@ -105,6 +105,9 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
       case 'F':
         fByF = !fByF;
         break;
+      case 'T':
+        scene_p->prevMode = !scene_p->prevMode;
+        break;
     }
   } else if (action == GLFW_RELEASE) {
     switch(key) {

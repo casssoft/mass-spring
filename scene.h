@@ -25,6 +25,7 @@ class Scene {
   int drawMode;
   bool slowMode;
   int groundMode;
+  bool prevMode;
   bool limitFps;
   std::vector<float> fpsVec;
  private:

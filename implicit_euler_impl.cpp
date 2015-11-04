@@ -47,7 +47,6 @@ void ParticleSystem::Reset() {
   faces.clear();
   facetotet.clear();
   outsidePoints.clear();
-  faceToOut.clear();
   useColSys = false;
 }
 
@@ -274,6 +273,7 @@ void ParticleSystem::ImplicitEulerSparse(double timestep) {
     particles[i].v[1] = newv[i * 3 + 1];
     particles[i].v[2] = newv[i * 3 + 2];
     particles[i].x += timestep * particles[i].v;
+    particles[i].lx = particles[i].x;
   }
 }
 

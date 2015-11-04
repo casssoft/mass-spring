@@ -24,6 +24,7 @@ Scene::Scene() {
   walkUp = walkDown = walkForward = walkBack = walkRight = walkLeft = false;
   drawMode = 0;
   slowMode = false;
+  prevMode = false;
 }
 
 void Scene::InitTime() {
@@ -130,7 +131,7 @@ void Scene::DrawScene(ParticleSystem* m, double strainSize, bool drawPoints) {
       colors = m->GetTriColors(&cSize, strainSize);
       break;
     case 1:
-      points = m->GetPositions3d(&pSize);
+      points = m->GetPositions3d(&pSize, prevMode);
       colors = m->GetColors(&cSize, strainSize, xpos, ypos, zpos);
       break;
     case 2:

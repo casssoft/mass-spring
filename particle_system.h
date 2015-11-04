@@ -8,7 +8,9 @@ class Particle {
   Eigen::Vector3d x;
   Eigen::Vector3d v;
   Eigen::Vector3d f;
+  Eigen::Vector3d lx;
   double iMass;
+  bool mark;
 };
 
 class Spring {
@@ -32,6 +34,7 @@ class Tetrahedra {
 };
 
 class CollisionSystem;
+class CollisionSystemPQP;
 class ParticleSystem {
  public:
   ParticleSystem();
@@ -40,7 +43,7 @@ class ParticleSystem {
   void onMouseDrag(Eigen::Vector3d origin, Eigen::Vector3d ray, double timestep);
   void onMousePress(Eigen::Vector3d origin, Eigen::Vector3d ray);
 
-  float* GetPositions3d(int* size);
+  float* GetPositions3d(int* size, bool);
   float* GetSurfaceTriangles3d(int* size);
   float* GetAllTriangles3d(int* size);
   float* GetTetCenter(int*size);
@@ -65,8 +68,9 @@ class ParticleSystem {
   std::vector<Particle> particles;
   std::vector<Particle> fixed_points;
  private:
+  void HandleCollisions(double timestep);
+  void SetupCollisions(double lowestpoint);
   void MakeFixedPoint(int i, std::vector<int>& edges, std::vector<int>& faces);
-  void CreateOutsidePointListFromFaces();
   void ComputeForces();
   void ExplicitEuler(double timestep);
   void ImplicitEulerSparse(double timestep);
@@ -79,13 +83,16 @@ class ParticleSystem {
   std::vector<int> faces;
   std::vector<int> facetotet;
   std::vector<int> outsidePoints;
-  std::vector<int> faceToOut;
+
   std::vector<Eigen::Vector3d> prevPos;
   std::vector<Eigen::Vector3d> prevVel;
   std::vector<Eigen::Vector3d> prevFEXT;
-
+#ifdef COLLISION_SELFCCD
   CollisionSystem* colSys;
-
+#endif
+#ifdef COLLISION_PQP
+  CollisionSystemPQP* colSys;
+#endif
   double stiffness;
   double volConserve;
   double dampness;
