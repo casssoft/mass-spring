@@ -242,7 +242,7 @@ void ParticleSystem::ImplicitEulerSparse(double timestep) {
   iesA.setFromTriplets(masstriplet.begin(), masstriplet.end());
 
   iesb = iesA * v_0 + timestep * (iesdfdx * x_0 - f_0 + f_ext);
-  iesA = iesA - (timestep * timestep * iesdfdx);
+  iesA = iesA - (timestep * -1 * dampness * iesA + timestep * timestep * iesdfdx);
   Eigen::ConjugateGradient<Eigen::SparseMatrix<double> > cg;
   cg.setTolerance(.000001);
   cg.setMaxIterations(20);

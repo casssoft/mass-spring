@@ -164,7 +164,7 @@ void Scene::DrawScene(ParticleSystem* m, double strainSize, bool drawPoints) {
 
   DrawDelegate::BeginFrame();
   DrawDelegate::SetViewMatrix(g_viewMatrix.data());
-  Scene::DrawGrid(1);
+  Scene::DrawGrid(1, m->groundLevel);
   if (drawPoints) {
      DrawDelegate::SetLineSize(3);
 
@@ -210,7 +210,7 @@ void Scene::Update(double timestep) {
   zpos = pos[2];
 
 }
-void Scene::DrawGrid(int gridSize) {
+void Scene::DrawGrid(int gridSize, double groundLevel) {
   int x_flr = -20;
   int y_flr = -20;
   int xGrids = 40;
@@ -219,11 +219,11 @@ void Scene::DrawGrid(int gridSize) {
   gridcolors.resize((xGrids + yGrids) * 6);
   for (int i = 0; i < xGrids; ++i) {
     gridpoints[i*6] = (i*gridSize + x_flr);
-    gridpoints[i*6 + 1] = y_flr;
-    gridpoints[i*6 + 2] = 3;
+    gridpoints[i*6 + 1] = groundLevel;
+    gridpoints[i*6 + 2] = y_flr;
     gridpoints[i*6 + 3] = (i*gridSize + x_flr);
-    gridpoints[i*6 + 4] = DDHEIGHT;
-    gridpoints[i*6 + 5] = 3;
+    gridpoints[i*6 + 4] = groundLevel;
+    gridpoints[i*6 + 5] = DDHEIGHT;
     gridcolors[i*6] = 0;
     gridcolors[i*6 + 1] = 1;
     gridcolors[i*6 + 2] = 0;
@@ -233,11 +233,11 @@ void Scene::DrawGrid(int gridSize) {
   }
   for (int i = xGrids; i < xGrids + yGrids; ++i) {
     gridpoints[i*6] = x_flr;
-    gridpoints[i*6 + 1] = ((i - xGrids) *gridSize + y_flr);
-    gridpoints[i*6 + 2] = 3;
+    gridpoints[i*6 + 1] = groundLevel;
+    gridpoints[i*6 + 2] = ((i - xGrids) *gridSize + y_flr);
     gridpoints[i*6 + 3] = DDWIDTH;
-    gridpoints[i*6 + 4] = ((i - xGrids)* gridSize + y_flr);
-    gridpoints[i*6 + 5] = 3;
+    gridpoints[i*6 + 4] = groundLevel;
+    gridpoints[i*6 + 5] = ((i - xGrids)* gridSize + y_flr);
     gridcolors[i*6] = 0;
     gridcolors[i*6 + 1] = 1;
     gridcolors[i*6 + 2] = 0;

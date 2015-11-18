@@ -17,7 +17,7 @@ class Scene {
   void ToggleLimitFps();
   double GetFps();
   void DrawScene(ParticleSystem* m, double strainSize, bool drawPoints);
-  void DrawGrid(int gridSize);
+  void DrawGrid(int gridSize, double groundLevel);
   void Update(double timestep);
 
   void GetCameraRay(double x, double y, Eigen::Vector3d* origin, Eigen::Vector3d* ray);

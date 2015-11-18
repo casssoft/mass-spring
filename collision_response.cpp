@@ -295,7 +295,6 @@ void ParticleSystem::HandleCollisions(double timestep) {
   std::vector<double> edgeU;
   colSys->GetCollisions(vertexToFace, edgeToEdge, edgeU, moveEdge);
   for (int i = 0; i < edgeToEdge.size(); i += 2) {
-    break;
     Particle *v1, *v2;
     int v1_i, v2_i;
     v1_i = faces[edgeToEdge[i]];

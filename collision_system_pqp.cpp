@@ -4,9 +4,6 @@
 #define FABS(x) (double(fabs(x)))        /* implement as is fastest on your machine */
 #include "stdio.h"
 #include "PQP.h"
-extern "C" {
-#include "tri_tri_intersect.h"
-};
 static bool initialized = false;
 
 static bool vflip, uflip;

@@ -67,6 +67,7 @@ class ParticleSystem {
   std::vector<Tetrahedra> tets;
   std::vector<Particle> particles;
   std::vector<Particle> fixed_points;
+  double groundLevel;
  private:
   void HandleCollisions(double timestep);
   void SetupCollisions(double lowestpoint);
@@ -99,7 +100,6 @@ class ParticleSystem {
   double groundStiffness;
   double mouseStiffness;
   double gravity;
-  double groundLevel;
   bool useColSys;
   bool corotational;
   bool colRolBack;

@@ -317,17 +317,17 @@ int main(int argc, const char **argv) {
 
       static float stiffness = 1000.0f;
       static float volumeConservation = 0.4f;
-      static float damping = 10.0f;
+      static float damping = 0.5f;
       static float gravity = 9.6f;
       static float strainDisplaySize = strainSize;
       static float groundStiffness = 1000.0f;
-      static float mouseStiffness = 1000.0f;
+      static float mouseStiffness = 10000.0f;
       ImGui::Text("Stiffness (Young's modulus)");
       ImGui::SliderFloat("##stiffness", &stiffness, 0.0f, 10000.0f, "%.3f", 2.0);
       ImGui::Text("Volume Conservation (Poisson's ratio)");
       ImGui::SliderFloat("##vol", &volumeConservation, 0.0f, .49999f);
       ImGui::Text("Damping (Not supported with FEM yet)");
-      ImGui::SliderFloat("##damp", &damping, 0.0f, 1000.0f, "%.3f", 2.0);
+      ImGui::SliderFloat("##damp", &damping, 0.0f, 100.0f, "%.3f", 2.0);
       ImGui::Text("Gravity m/s^2");
       ImGui::SliderFloat("##grav", &gravity, 0.0f, 50.0f);
       ImGui::Text("Strain display ratio");
@@ -335,7 +335,7 @@ int main(int argc, const char **argv) {
       ImGui::Text("Ground stiffness (size of penalty forces)");
       ImGui::SliderFloat("##groundstiffness", &groundStiffness, 0.0f, 10000.0f);
       ImGui::Text("Mouse spring stiffness");
-      ImGui::SliderFloat("##mousestiffness", &mouseStiffness, 0.0f, 10000.0f);
+      ImGui::SliderFloat("##mousestiffness", &mouseStiffness, 0.0f, 100000.0f);
       static bool useRollback = false;
       ImGui::Checkbox("Use rollback col system?", &useRollback);
 

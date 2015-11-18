@@ -12,11 +12,11 @@
 
 ParticleSystem::ParticleSystem() {
   stiffness = 1000;
-  dampness = 10;
+  dampness = .5;
   gravity = 9.8;
   groundLevel = 5;
   groundStiffness = 1000;
-  mouseStiffness = 100;
+  mouseStiffness = 10000;
 #ifdef COLLISION_SELFCCD
   colSys = new CollisionSystem();
 #endif
@@ -195,10 +195,14 @@ void ParticleSystem::onMouseDrag(Eigen::Vector3d ori, Eigen::Vector3d ray, doubl
   if (lastpoint >= 0) {
     double temp0 = ray.dot(particles[point].x - ori);
     Eigen::Vector3d closePoint = ori + temp0 * ray;
-    Eigen::Vector3d moveDir = ori + temp0 * ray -  particles[point].x;
-    double dist = moveDir.norm();
-    //moveDir.normalize();
-    particles[point].f += moveDir * mouseStiffness * timestep;
+    Eigen::Vector3d newV = (particles[point].v + mouseStiffness * timestep * (closePoint - particles[point].x)) / (1 + mouseStiffness * timestep * timestep);
+    particles[point].v = newV;
+
+    //Eigen::Vector3d moveDir = ori + temp0 * ray -  particles[point].x;
+    //double dist = moveDir.norm();
+    ////moveDir.normalize();
+    //Eigen::
+    //particles[point].f += moveDir * mouseStiffness * timestep;
     //Spring to cursor?
   }
 }
