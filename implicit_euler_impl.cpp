@@ -64,7 +64,7 @@ void ParticleSystem::ImplicitEulerSparse(double timestep) {
 
   static std::vector<Eigen::Matrix3d> strainForTets;
 
-  if (!hasPrev) {
+  if (!hasPrev || plastiscity) {
     strainForTets.resize(tets.size() * 16);
     printf("Number of tets: %i\n", tets.size());
     for (int i = 0; i < tets.size(); i++) {

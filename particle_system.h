@@ -11,6 +11,8 @@ class Particle {
   Eigen::Vector3d lx;
   double iMass;
   bool mark;
+  int numTet;
+  double stressInc;
 };
 
 class Spring {
@@ -103,6 +105,7 @@ class ParticleSystem {
   bool useColSys;
   bool corotational;
   bool colRolBack;
+  bool plastiscity;
   void AddTet(int x1, int x2, int x3, int x4);
   void GetTetP(int i, Particle*& p1, Particle*& p2, Particle*& p3, Particle*& p4);
   void GetPointP(int i, Particle*& x1);

@@ -17,6 +17,7 @@ ParticleSystem::ParticleSystem() {
   groundLevel = 5;
   groundStiffness = 1000;
   mouseStiffness = 10000;
+  plastiscity = false;
 #ifdef COLLISION_SELFCCD
   colSys = new CollisionSystem();
 #endif
@@ -561,6 +562,12 @@ float* ParticleSystem::GetTriColors(int* size, double strainSize) {
 float* ParticleSystem::GetStrainSurfaceTriColors(int* size, double strainSize) {
   *size = faces.size()*3;
   colorTemp.resize(*size);
+  for (int i = 0; i < faces.size(); ++i) {
+    Particle* p1;
+    GetPointP(faces[i], p1);
+    p1->numTet = 0;
+    p1->stressInc = 0.0;
+  }
   for (int i = 0; i < tets.size(); i++) {
     Particle *p1,*p2,*p3,*p4;
     GetTetP(i, p1, p2, p3, p4);
@@ -575,7 +582,7 @@ float* ParticleSystem::GetStrainSurfaceTriColors(int* size, double strainSize) {
     } else {
       greenStrainTensor = .5 * (deformGradient + deformGradient.transpose());
     }
-    double v = .4;
+    double v = volConserve;
     Eigen::VectorXd strainVec(6);
     strainVec << greenStrainTensor(0,0), greenStrainTensor(1,1),
                                     greenStrainTensor(2,2), greenStrainTensor(1,0),
@@ -596,13 +603,26 @@ float* ParticleSystem::GetStrainSurfaceTriColors(int* size, double strainSize) {
                     stressVec[5], stressVec[4], stressVec[2];
     double strain = stressTensor.norm();
     tets[i].strain = strain;
+    p1->stressInc += strain;
+    p2->stressInc += strain;
+    p3->stressInc += strain;
+    p4->stressInc += strain;
+    p1->numTet += 1;
+    p2->numTet += 1;
+    p3->numTet += 1;
+    p4->numTet += 1;
   }
-  for (int i = 0; i < faces.size()/3; i++) {
-    double strain = tets[facetotet[i]].strain;
-    LerpColors(strain * strainSize, &(colorTemp[i*9]));
-    LerpColors(strain * strainSize, &(colorTemp[i*9+3]));
-    LerpColors(strain * strainSize, &(colorTemp[i*9+6]));
+  for (int i = 0; i < faces.size(); ++i) {
+    Particle* p1;
+    GetPointP(faces[i], p1);
+    LerpColors((p1->stressInc/p1->numTet) * strainSize, &(colorTemp[i*3]));
   }
+  //for (int i = 0; i < faces.size()/3; i++) {
+  //  double strain = tets[facetotet[i]].strain;
+  //  LerpColors(strain * strainSize, &(colorTemp[i*9]));
+  //  LerpColors(strain * strainSize, &(colorTemp[i*9+3]));
+  //  LerpColors(strain * strainSize, &(colorTemp[i*9+6]));
+  //}
   return colorTemp.data();
 }
 

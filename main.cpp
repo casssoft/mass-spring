@@ -296,9 +296,9 @@ int main(int argc, const char **argv) {
       const char* drawModeTypes[] = {
         "Normal",
         "Lines between tets",
-        "Surface triangles and strain (broken for load mesh)",
+        "Accumulated stress on surface points",
         "Tet center with strain",
-        "All tets and strain"
+        "All tets with strain"
       };
       int drawModeLength = 5;
       if (ImGui::Button("Select Draw Mode.."))
