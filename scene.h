@@ -1,9 +1,11 @@
 #ifndef SCENE_H__
 #define SCENE_H__
 
+#include "../Eigen/Core"
 #include <vector>
 
 class ParticleSystem;
+
 class Scene {
  public:
   Scene();
@@ -14,11 +16,20 @@ class Scene {
   void SetLimitFps(bool enable);
   void ToggleLimitFps();
   double GetFps();
-  void DrawScene(ParticleSystem* m, int strainSize, float xpos, float ypos, float zpos, bool drawPoints);
-  void DrawGrid(int gridSize);
+  void DrawScene(ParticleSystem* m, double strainSize, bool drawPoints);
+  void DrawGrid(int gridSize, double groundLevel);
+  void Update(double timestep);
+
+  void GetCameraRay(double x, double y, Eigen::Vector3d* origin, Eigen::Vector3d* ray);
+  bool walkForward, walkBack, walkRight, walkLeft, walkUp, walkDown;
+  int drawMode;
+  bool slowMode;
+  int groundMode;
+  bool prevMode;
+  bool limitFps;
+  std::vector<float> fpsVec;
  private:
   int frames;
-  bool limitFps;
   int GridFloor(double x, int mpG);
   std::vector<float> gridpoints;
   std::vector<float> gridcolors;
@@ -27,6 +38,8 @@ class Scene {
   double timeAhead;
   double prevTime;
   double secondsPerFrame;
+  double xpos, ypos, zpos;
+  double xtarg, ytarg, ztarg;
 };
 
 #endif
